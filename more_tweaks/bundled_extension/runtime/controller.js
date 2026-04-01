@@ -617,6 +617,13 @@ export class AnimationController {
             'system-show-apps-duration-ms',
             self => [self._stateAdjustment]);
 
+        // Overview state shift (ControlsManager._shiftState handles double-tap
+        // Super → app grid and shift-overview keybindings by directly easing
+        // _stateAdjustment to the next/previous state)
+        patchEase(ControlsManager.prototype, '_shiftState',
+            'system-show-apps-duration-ms',
+            self => [self._stateAdjustment]);
+
         // App grid view switching (BaseAppView/AppDisplay.animateSwitch
         // eases this._grid and optionally this._currentDialog)
         patchEase(AppDisplay.prototype, 'animateSwitch',
