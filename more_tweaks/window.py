@@ -185,6 +185,50 @@ def _clear_box(box: Gtk.Box):
         child = next_child
 
 
+# Minimum GNOME Shell version for the bundled extension (ESM imports).
+_MIN_GNOME_FOR_EXTENSION = 45
+
+
+def _check_capability(
+    ab: "AnimationBackend",
+    capability: str,
+    feature_label: str,
+) -> Gtk.Box | None:
+    """Return a status page if *capability* is unavailable, else ``None``.
+
+    Checks both the GNOME Shell version floor and the runtime capability
+    flags reported by the extension.  Returns ``None`` when the feature is
+    usable so callers can just ``if page := ...: self.append(page); return``.
+    """
+    shell_ver = ab.get_detected_shell_version()
+    if 0 < shell_ver < _MIN_GNOME_FOR_EXTENSION:
+        return _build_status_page(
+            icon_name="dialog-warning-symbolic",
+            title=f"Requires GNOME {_MIN_GNOME_FOR_EXTENSION}+",
+            description=(
+                f"Your system is running GNOME {shell_ver}. "
+                f"{feature_label} requires GNOME {_MIN_GNOME_FOR_EXTENSION} or later."
+            ),
+        )
+    caps = ab.get_active_capabilities()
+    if caps and not caps.get(capability, True):
+        desc = (
+            f"{feature_label} could not initialize on this version of GNOME Shell. "
+            "This may be fixed in a future update."
+        )
+        if shell_ver > 0:
+            desc = (
+                f"{feature_label} is not available on GNOME {shell_ver}. "
+                "This may be fixed in a future update."
+            )
+        return _build_status_page(
+            icon_name="dialog-warning-symbolic",
+            title=f"{feature_label} Unavailable",
+            description=desc,
+        )
+    return None
+
+
 def _build_status_page(icon_name: str, title: str, description: str) -> Gtk.Box:
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
     box.set_halign(Gtk.Align.CENTER)
@@ -1388,24 +1432,35 @@ class TopBarSection(_ScrollPreservingSection):
             ))
             return
 
-        if not self._animation_backend.get_panel_items_available():
-            self.append(_build_status_page(
-                icon_name="system-log-out-symbolic",
-                title="Log Out Required",
-                description=(
-                    "The shell extension needs to be restarted to report "
-                    "your current top bar items.\n\n"
-                    "On Wayland, log out and log back in. "
-                    "Panel reordering will become available after that."
-                ),
-            ))
-            return
+        # Capability checks for panel layout and top bar overrides
+        panel_blocked = _check_capability(
+            self._animation_backend, "panelLayout", "Panel Layout Customization")
+        topbar_blocked = _check_capability(
+            self._animation_backend, "topBar", "Top Bar Overrides")
 
-        self._panel_section.refresh()
-        self.append(self._panel_section)
+        if panel_blocked is None:
+            if not self._animation_backend.get_panel_items_available():
+                self.append(_build_status_page(
+                    icon_name="system-log-out-symbolic",
+                    title="Log Out Required",
+                    description=(
+                        "The shell extension needs to be restarted to report "
+                        "your current top bar items.\n\n"
+                        "On Wayland, log out and log back in. "
+                        "Panel reordering will become available after that."
+                    ),
+                ))
+            else:
+                self._panel_section.refresh()
+                self.append(self._panel_section)
+        else:
+            self.append(panel_blocked)
 
         # Top bar overrides — extension-backed appearance tweaks
-        self._build_topbar_overrides()
+        if topbar_blocked is None:
+            self._build_topbar_overrides()
+        else:
+            self.append(topbar_blocked)
 
     def _build_topbar_overrides(self):
         ab = self._animation_backend
@@ -1643,10 +1698,24 @@ class TilingSection(_ScrollPreservingSection):
             self._updating_gaps = False
             return
 
+        # Capability checks for tiling features
+        grid_blocked = _check_capability(
+            self._animation_backend, "tileGrid", "Tile Grid & Snap Preview")
+        gaps_blocked = _check_capability(
+            self._animation_backend, "tileGaps", "Tile Gaps")
+
         # Extension-backed tiling controls
-        self._build_tile_grid_group()
-        self._build_tile_gap_group()
-        self._build_tile_preview_group()
+        if grid_blocked is None:
+            self._build_tile_grid_group()
+            self._build_tile_preview_group()
+        else:
+            self.append(grid_blocked)
+
+        if gaps_blocked is None:
+            self._build_tile_gap_group()
+        else:
+            self.append(gaps_blocked)
+
         self._updating_gaps = False
 
     def _build_tile_gap_group(self):
@@ -1962,6 +2031,11 @@ class TouchpadSection(_ScrollPreservingSection):
             ))
             return
 
+        if page := _check_capability(
+            self._animation_backend, "gestures", "Gesture Overrides"):
+            self.append(page)
+            return
+
         self._build_gesture_group()
 
     def _build_gesture_group(self):
@@ -2151,16 +2225,32 @@ class AnimationSection(_ScrollPreservingSection):
         notebook.set_scrollable(True)
         notebook.set_size_request(-1, 500)
 
+        # Map animation group IDs to the capability they require
+        _group_capability = {
+            "windows": "animations",
+            "window_states": "animations",
+            "interactive": "animations",
+            "dialogs": "animations",
+            "notifications": "notifications",
+        }
+
         # System timing tab (first)
         system_page = Gtk.ScrolledWindow(vexpand=True, hexpand=True)
         system_page.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        system_page.set_child(self._build_system_timing_group())
+        sys_blocked = _check_capability(
+            self.backend, "systemTimings", "System Animation Timings")
+        system_page.set_child(
+            sys_blocked if sys_blocked else self._build_system_timing_group())
         notebook.append_page(system_page, Gtk.Label(label="System"))
 
         for group_state in group_states:
             page = Gtk.ScrolledWindow(vexpand=True, hexpand=True)
             page.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-            page.set_child(self._build_group(group_state))
+            cap = _group_capability.get(group_state.spec.id, "animations")
+            blocked = _check_capability(
+                self.backend, cap, f"{group_state.spec.title} Animations")
+            page.set_child(
+                blocked if blocked else self._build_group(group_state))
             notebook.append_page(page, Gtk.Label(label=group_state.spec.title))
 
         # Per-App Rules tab
@@ -2343,6 +2433,30 @@ class AnimationSection(_ScrollPreservingSection):
         scope_label.add_css_class("dim-label")
         scope_row.add_suffix(scope_label)
         group.add(scope_row)
+
+        # GNOME Shell version (informational)
+        shell_ver = self.backend.get_detected_shell_version()
+        if shell_ver > 0:
+            ver_row = Adw.ActionRow(title="GNOME Shell version")
+            ver_row.set_subtitle(
+                "Major version detected by the extension at startup.")
+            ver_label = Gtk.Label(label=f"GNOME {shell_ver}")
+            ver_label.add_css_class("dim-label")
+            ver_row.add_suffix(ver_label)
+            group.add(ver_row)
+
+        # Capabilities (show only if something failed)
+        caps = self.backend.get_active_capabilities()
+        failed = [k for k, v in caps.items() if not v]
+        if failed:
+            caps_row = Adw.ActionRow(title="Capability issues")
+            active = [k for k, v in caps.items() if v]
+            caps_row.set_subtitle(
+                f"Some features could not load: {', '.join(failed)}")
+            caps_label = Gtk.Label(label=f"{len(active)}/{len(caps)} active")
+            caps_label.add_css_class("dim-label")
+            caps_row.add_suffix(caps_label)
+            group.add(caps_row)
 
         # Debug logging switch
         debug_row = Adw.ActionRow(title="Runtime debug logging")

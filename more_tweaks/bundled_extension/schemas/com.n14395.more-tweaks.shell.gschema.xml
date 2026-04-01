@@ -343,5 +343,17 @@
       <summary>Available panel items</summary>
       <description>JSON object written by the shell extension listing the actual items in the GNOME Shell panel. Format: {"left":["activities"],"center":["dateMenu"],"right":["a11y","keyboard","quickSettings"]}. Empty string means the extension has not reported yet.</description>
     </key>
+
+    <key name="detected-shell-version" type="s">
+      <default>''</default>
+      <summary>Detected GNOME Shell version</summary>
+      <description>Major GNOME Shell version detected at extension enable time. Written by the extension, read by the Python UI. Empty string means the extension has not reported yet.</description>
+    </key>
+
+    <key name="active-capabilities" type="s">
+      <default>''</default>
+      <summary>Active extension capabilities</summary>
+      <description>JSON object written by the extension listing which feature managers initialized successfully. Empty string means the extension has not reported yet.</description>
+    </key>
   </schema>
 </schemalist>

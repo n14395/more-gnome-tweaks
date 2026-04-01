@@ -2,6 +2,22 @@ import Clutter from 'gi://Clutter';
 import Meta from 'gi://Meta';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import {PACKAGE_VERSION} from 'resource:///org/gnome/shell/misc/config.js';
+
+
+let _shellMajorVersion = null;
+
+export function getShellMajorVersion() {
+    if (_shellMajorVersion !== null)
+        return _shellMajorVersion;
+    try {
+        const major = parseInt(PACKAGE_VERSION.split('.')[0], 10);
+        _shellMajorVersion = isNaN(major) ? 0 : major;
+    } catch {
+        _shellMajorVersion = 0;
+    }
+    return _shellMajorVersion;
+}
 
 
 export function resetActor(actor) {

@@ -378,6 +378,54 @@ class AnimationBackend:
             return False
         return self._settings.set_double(key, value)
 
+    # ── Version detection & capability reporting ─────────────────────
+
+    def get_detected_shell_version(self) -> int:
+        """Return the GNOME Shell major version, or 0 if unknown.
+
+        Prefers the value reported by the extension via GSettings.
+        Falls back to parsing ``gnome-shell --version``.
+        """
+        ver_str = self._get_string("detected-shell-version", "")
+        if ver_str:
+            try:
+                return int(ver_str)
+            except ValueError:
+                pass
+        return self._detect_shell_version_from_cli()
+
+    @staticmethod
+    def _detect_shell_version_from_cli() -> int:
+        """Parse GNOME Shell version from CLI.  Returns major version or 0."""
+        try:
+            result = subprocess.run(
+                ["gnome-shell", "--version"],
+                capture_output=True, text=True, timeout=5,
+            )
+            for word in result.stdout.split():
+                if word and word[0].isdigit():
+                    return int(word.split(".")[0])
+        except (OSError, subprocess.TimeoutExpired, ValueError, IndexError):
+            pass
+        return 0
+
+    def get_active_capabilities(self) -> dict[str, bool]:
+        """Return the capabilities reported by the running extension."""
+        import json
+        raw = self._get_string("active-capabilities", "")
+        if not raw:
+            return {}
+        try:
+            caps = json.loads(raw)
+            return {k: bool(v) for k, v in caps.items()}
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+    def is_capability_available(self, capability: str) -> bool:
+        """Check if a specific extension capability is active."""
+        caps = self.get_active_capabilities()
+        return caps.get(capability, False)
+
     def _binding_state(self, spec: AnimationBindingSpec) -> AnimationBindingState:
         return AnimationBindingState(
             spec=spec,

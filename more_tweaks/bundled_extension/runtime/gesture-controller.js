@@ -96,9 +96,15 @@ export class GestureController {
     // ── patch management ──────────────────────────────────────────────
 
     _applyAll() {
-        this._patchOverview();
-        this._patchWorkspace();
-        this._installFreeHandler();
+        try { this._patchOverview(); } catch (e) {
+            console.warn(`[More Tweaks] Overview gesture patch failed: ${e}`);
+        }
+        try { this._patchWorkspace(); } catch (e) {
+            console.warn(`[More Tweaks] Workspace gesture patch failed: ${e}`);
+        }
+        try { this._installFreeHandler(); } catch (e) {
+            console.warn(`[More Tweaks] Free gesture handler failed: ${e}`);
+        }
     }
 
     _removeAll() {
@@ -137,6 +143,11 @@ export class GestureController {
     // ── action dispatch ───────────────────────────────────────────────
 
     _dispatch(action) {
+        try { this._dispatchInner(action); }
+        catch (e) { console.warn(`[More Tweaks] Gesture dispatch '${action}' failed: ${e}`); }
+    }
+
+    _dispatchInner(action) {
         switch (action) {
         case ACT_OVERVIEW:
             if (Main.overview.visible)

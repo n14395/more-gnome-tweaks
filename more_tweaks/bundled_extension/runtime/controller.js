@@ -21,6 +21,7 @@ import {
     loadCustomPresets,
 } from './registry.js';
 import {
+    getShellMajorVersion,
     getWindowTypeName,
     isMoveGrabOp,
     isResizeGrabOp,
@@ -54,12 +55,34 @@ export class AnimationController {
         this._tileGridManager = new TileGridManager(settings);
     }
 
-    enable() {
+    enable(capabilities = {}) {
         loadCustomPresets();
         this._syncProfileLabel();
-        this._installWindowHooks();
-        this._installNotificationHooks();
-        this._installSystemTimingHooks();
+
+        try {
+            this._installWindowHooks();
+            capabilities.animations = true;
+        } catch (e) {
+            logDebug(this._settings, `window hooks failed: ${e}`);
+            capabilities.animations = false;
+        }
+
+        try {
+            this._installNotificationHooks();
+            capabilities.notifications = true;
+        } catch (e) {
+            logDebug(this._settings, `notification hooks failed: ${e}`);
+            capabilities.notifications = false;
+        }
+
+        try {
+            this._installSystemTimingHooks();
+            capabilities.systemTimings = true;
+        } catch (e) {
+            logDebug(this._settings, `system timing hooks failed: ${e}`);
+            capabilities.systemTimings = false;
+        }
+
         this._lastFocusedWindow = global.display.focus_window ?? null;
         this._settingsChangedId = this._settings.connect('changed', (_, key) => {
             if (key?.startsWith('system-'))
@@ -69,50 +92,87 @@ export class AnimationController {
             if (key === 'per-app-overrides')
                 this._refreshPerAppOverrides();
         });
-        this._panelManager.enable();
-        this._topBarManager.enable();
-        this._tileGapManager.enable();
-        this._tileGridManager.enable();
+
+        try {
+            this._panelManager.enable();
+            capabilities.panelLayout = true;
+        } catch (e) {
+            logDebug(this._settings, `panel layout manager failed: ${e}`);
+            capabilities.panelLayout = false;
+        }
+
+        try {
+            this._topBarManager.enable();
+            capabilities.topBar = true;
+        } catch (e) {
+            logDebug(this._settings, `top bar manager failed: ${e}`);
+            capabilities.topBar = false;
+        }
+
+        try {
+            this._tileGapManager.enable();
+            capabilities.tileGaps = true;
+        } catch (e) {
+            logDebug(this._settings, `tile gap manager failed: ${e}`);
+            capabilities.tileGaps = false;
+        }
+
+        try {
+            this._tileGridManager.enable();
+            capabilities.tileGrid = true;
+        } catch (e) {
+            logDebug(this._settings, `tile grid manager failed: ${e}`);
+            capabilities.tileGrid = false;
+        }
+
         logDebug(this._settings, 'animation controller enabled');
     }
 
     disable() {
         for (const signalId of this._windowSignals)
-            global.window_manager.disconnect(signalId);
+            try { global.window_manager.disconnect(signalId); } catch {}
         for (const signalId of this._displaySignals)
-            global.display.disconnect(signalId);
+            try { global.display.disconnect(signalId); } catch {}
         this._windowSignals = [];
         this._displaySignals = [];
         this._activeGrab = null;
         this._lastFocusedWindow = null;
         this._clearAnimationWatchdogs();
 
-        if (this._origShouldAnimateActor)
-            Main.wm._shouldAnimateActor = this._origShouldAnimateActor;
-        if (this._origCompletedMinimize)
-            Main.wm._shellwm.completed_minimize = this._origCompletedMinimize;
-        if (this._origCompletedUnminimize)
-            Main.wm._shellwm.completed_unminimize = this._origCompletedUnminimize;
-        if (this._origUpdateShowingNotification)
-            Main.messageTray._updateShowingNotification = this._origUpdateShowingNotification;
-        if (this._origHideNotification)
-            Main.messageTray._hideNotification = this._origHideNotification;
+        try {
+            if (this._origShouldAnimateActor)
+                Main.wm._shouldAnimateActor = this._origShouldAnimateActor;
+            if (this._origCompletedMinimize)
+                Main.wm._shellwm.completed_minimize = this._origCompletedMinimize;
+            if (this._origCompletedUnminimize)
+                Main.wm._shellwm.completed_unminimize = this._origCompletedUnminimize;
+        } catch {}
 
-        this._restoreSystemTimings();
+        try {
+            if (this._origUpdateShowingNotification)
+                Main.messageTray._updateShowingNotification = this._origUpdateShowingNotification;
+            if (this._origHideNotification)
+                Main.messageTray._hideNotification = this._origHideNotification;
+        } catch {}
+
+        try { this._restoreSystemTimings(); } catch {}
+
         if (this._settingsChangedId) {
-            this._settings.disconnect(this._settingsChangedId);
+            try { this._settings.disconnect(this._settingsChangedId); } catch {}
             this._settingsChangedId = null;
         }
 
-        for (const actor of global.get_window_actors())
-            resetActor(actor);
-        if (Main.messageTray?._bannerBin)
-            resetActor(Main.messageTray._bannerBin);
+        try {
+            for (const actor of global.get_window_actors())
+                resetActor(actor);
+            if (Main.messageTray?._bannerBin)
+                resetActor(Main.messageTray._bannerBin);
+        } catch {}
 
-        this._tileGridManager.disable();
-        this._tileGapManager.disable();
-        this._topBarManager.disable();
-        this._panelManager.disable();
+        try { this._tileGridManager.disable(); } catch {}
+        try { this._tileGapManager.disable(); } catch {}
+        try { this._topBarManager.disable(); } catch {}
+        try { this._panelManager.disable(); } catch {}
         logDebug(this._settings, 'animation controller disabled');
     }
 
@@ -123,6 +183,9 @@ export class AnimationController {
     }
 
     _installWindowHooks() {
+        if (!Main.wm?._shouldAnimateActor || !Main.wm?._shellwm?.completed_minimize)
+            throw new Error('WindowManager animation hooks not found');
+
         this._origShouldAnimateActor = Main.wm._shouldAnimateActor;
         this._origCompletedMinimize = Main.wm._shellwm.completed_minimize;
         this._origCompletedUnminimize = Main.wm._shellwm.completed_unminimize;
@@ -266,6 +329,9 @@ export class AnimationController {
     }
 
     _installNotificationHooks() {
+        if (!Main.messageTray?._updateShowingNotification || !Main.messageTray?._hideNotification)
+            throw new Error('MessageTray notification methods not found');
+
         this._origUpdateShowingNotification = Main.messageTray._updateShowingNotification;
         this._origHideNotification = Main.messageTray._hideNotification;
 
@@ -1264,9 +1330,10 @@ class PanelLayoutManager {
             'changed::panel-layout', () => this._applyLayout()
         );
         // Watch for indicators being added/removed from panel boxes.
-        // GNOME 47+ renamed the Clutter signals to child-added/child-removed.
-        const addSignal = 'child-added';
-        const removeSignal = 'child-removed';
+        // GNOME 47+ renamed Clutter signals from actor-added/removed to child-added/removed.
+        const ver = getShellMajorVersion();
+        const addSignal = ver >= 47 ? 'child-added' : 'actor-added';
+        const removeSignal = ver >= 47 ? 'child-removed' : 'actor-removed';
         for (const box of [Main.panel._leftBox, Main.panel._centerBox, Main.panel._rightBox]) {
             const addId = box.connect(addSignal, () => this._scheduleRepublish());
             const removeId = box.connect(removeSignal, () => this._scheduleRepublish());

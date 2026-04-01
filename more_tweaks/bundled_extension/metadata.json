@@ -2,7 +2,7 @@
   "uuid": "more-tweaks-shell@n14395.github.com",
   "name": "More Tweaks Shell Runtime",
   "description": "App-owned GNOME Shell runtime used by More Tweaks for window and notification animations.",
-  "shell-version": ["49"],
+  "shell-version": ["45", "46", "47", "48", "49"],
   "settings-schema": "com.n14395.more-tweaks.shell",
   "version": 1,
   "url": "https://github.com/n14395/more-gnome-tweaks"
