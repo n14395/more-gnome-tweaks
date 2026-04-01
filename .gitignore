@@ -1,0 +1,11 @@
+# Flatpak build artifacts
+flatpak-build/
+flatpak-repo/
+*.flatpak
+.flatpak-builder/
+
+# Python
+__pycache__/
+*.egg-info/
+dist/
+build/

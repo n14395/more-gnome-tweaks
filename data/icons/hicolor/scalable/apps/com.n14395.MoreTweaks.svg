@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3d3846"/>
+      <stop offset="1" stop-color="#241f31"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="128" height="128" rx="20" fill="url(#bg)"/>
+  <!-- 3x3 grid of toggle switches -->
+  <!-- Row 1 -->
+  <!-- Toggle ON -->
+  <g transform="translate(22,28)">
+    <rect width="26" height="14" rx="7" fill="white" opacity="0.95"/>
+    <circle cx="19" cy="7" r="5" fill="#241f31"/>
+  </g>
+  <!-- Toggle OFF -->
+  <g transform="translate(56,28)">
+    <rect width="26" height="14" rx="7" fill="white" opacity="0.35"/>
+    <circle cx="7" cy="7" r="5" fill="white" opacity="0.6"/>
+  </g>
+  <!-- Toggle ON -->
+  <g transform="translate(90,28)">
+    <rect width="26" height="14" rx="7" fill="white" opacity="0.95"/>
+    <circle cx="19" cy="7" r="5" fill="#241f31"/>
+  </g>
+  <!-- Row 2 -->
+  <!-- Toggle ON -->
+  <g transform="translate(22,56)">
+    <rect width="26" height="14" rx="7" fill="white" opacity="0.95"/>
+    <circle cx="19" cy="7" r="5" fill="#241f31"/>
+  </g>
+  <!-- Toggle ON -->
+  <g transform="translate(56,56)">
+    <rect width="26" height="14" rx="7" fill="white" opacity="0.95"/>
+    <circle cx="19" cy="7" r="5" fill="#241f31"/>
+  </g>
+  <!-- Toggle OFF -->
+  <g transform="translate(90,56)">
+    <rect width="26" height="14" rx="7" fill="white" opacity="0.35"/>
+    <circle cx="7" cy="7" r="5" fill="white" opacity="0.6"/>
+  </g>
+  <!-- Row 3 -->
+  <!-- Toggle OFF -->
+  <g transform="translate(22,84)">
+    <rect width="26" height="14" rx="7" fill="white" opacity="0.35"/>
+    <circle cx="7" cy="7" r="5" fill="white" opacity="0.6"/>
+  </g>
+  <!-- Toggle ON -->
+  <g transform="translate(56,84)">
+    <rect width="26" height="14" rx="7" fill="white" opacity="0.95"/>
+    <circle cx="19" cy="7" r="5" fill="#241f31"/>
+  </g>
+  <!-- Toggle ON -->
+  <g transform="translate(90,84)">
+    <rect width="26" height="14" rx="7" fill="white" opacity="0.95"/>
+    <circle cx="19" cy="7" r="5" fill="#241f31"/>
+  </g>
+</svg>

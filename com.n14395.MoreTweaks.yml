@@ -1,0 +1,46 @@
+app-id: com.n14395.MoreTweaks
+runtime: org.gnome.Platform
+runtime-version: '50'
+sdk: org.gnome.Sdk
+command: more-tweaks
+
+finish-args:
+  # Display
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --device=dri
+
+  # DConf/GSettings — the app reads and writes host GSettings
+  - --filesystem=xdg-run/dconf
+  - --filesystem=xdg-config/dconf:ro
+  - --talk-name=ca.desrt.dconf
+  - --env=DCONF_USER_CONFIG_DIR=.config/dconf
+
+  # GNOME Shell extension installation
+  - --filesystem=~/.local/share/gnome-shell/extensions:create
+
+  # DBus — manages the bundled Shell extension
+  - --talk-name=org.gnome.Shell
+  - --talk-name=org.gnome.Shell.Extensions
+
+cleanup:
+  - /include
+  - /lib/pkgconfig
+  - '*.la'
+  - '*.a'
+
+modules:
+  - name: more-tweaks
+    buildsystem: simple
+    build-commands:
+      - pip3 install --prefix=/app --no-deps --no-build-isolation .
+      - install -Dm644 data/com.n14395.MoreTweaks.desktop
+          /app/share/applications/com.n14395.MoreTweaks.desktop
+      - install -Dm644 data/com.n14395.MoreTweaks.metainfo.xml
+          /app/share/metainfo/com.n14395.MoreTweaks.metainfo.xml
+      - install -Dm644 data/icons/hicolor/scalable/apps/com.n14395.MoreTweaks.svg
+          /app/share/icons/hicolor/scalable/apps/com.n14395.MoreTweaks.svg
+    sources:
+      - type: dir
+        path: .

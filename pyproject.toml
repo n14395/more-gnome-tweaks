@@ -1,0 +1,29 @@
+[project]
+name = "more-tweaks"
+version = "1.1.0"
+description = "A GNOME GUI for hidden tweaks and settings."
+readme = "README.md"
+license = "GPL-3.0-or-later"
+requires-python = ">=3.12"
+
+[project.scripts]
+more-tweaks = "more_tweaks.app:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.package-data]
+more_tweaks = [
+  "bundled_extension/*.json",
+  "bundled_extension/*.js",
+  "bundled_extension/runtime/*.js",
+  "bundled_extension/schemas/*.xml",
+]

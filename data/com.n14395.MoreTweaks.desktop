@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=More Tweaks
+GenericName=GNOME Tweaking Tool
+Comment=A GUI for hidden GNOME desktop tweaks and settings
+Icon=com.n14395.MoreTweaks
+Exec=more-tweaks
+Terminal=false
+Categories=GNOME;GTK;Settings;DesktopSettings;
+Keywords=tweaks;settings;gnome;dconf;gsettings;customization;animations;
+StartupNotify=true

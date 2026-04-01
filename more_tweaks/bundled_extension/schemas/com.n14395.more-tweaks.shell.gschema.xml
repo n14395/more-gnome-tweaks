@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema path="/com/n14395/more-tweaks/shell/" id="com.n14395.more-tweaks.shell">
+    <key name="active-profile" type="s">
+      <default>'Balanced'</default>
+      <summary>Active curated profile</summary>
+      <description>Current bundled animation profile.</description>
+    </key>
+    <key name="debug-logging" type="b">
+      <default>false</default>
+      <summary>Enable runtime debug logging</summary>
+      <description>Emit More Tweaks runtime logs into GNOME Shell logs.</description>
+    </key>
+    <key name="test-mode" type="b">
+      <default>false</default>
+      <summary>Enable deterministic runtime test mode</summary>
+      <description>Reserved for predictable animation testing.</description>
+    </key>
+    <key name="reduced-motion-mode" type="b">
+      <default>false</default>
+      <summary>Reduce motion intensity</summary>
+      <description>Keep the bundled runtime enabled while toning down movement.</description>
+    </key>
+    <key name="experimental-effects" type="b">
+      <default>false</default>
+      <summary>Enable experimental effects</summary>
+      <description>Expose higher-risk compiz-like or shader-capable effect families.</description>
+    </key>
+    <key name="effects-quality" type="s">
+      <default>'balanced'</default>
+      <summary>Effect quality tier</summary>
+      <description>Controls how aggressively advanced effects should trade performance for spectacle.</description>
+    </key>
+
+    <key name="custom-presets-version" type="i">
+      <default>0</default>
+      <summary>Custom presets version counter</summary>
+      <description>Incremented when custom presets file changes, signaling the extension to reload.</description>
+    </key>
+    <key name="per-app-overrides" type="s">
+      <default>''</default>
+      <summary>Per-application animation overrides</summary>
+      <description>JSON string containing per-WM_CLASS animation rule overrides.</description>
+    </key>
+
+    <!-- System-level animation durations (patching hardcoded Shell constants) -->
+    <key name="system-overview-duration-ms" type="i">
+      <default>250</default>
+      <summary>Overview animation duration</summary>
+      <description>Duration in milliseconds for showing and hiding the Activities overview.</description>
+    </key>
+    <key name="system-show-apps-duration-ms" type="i">
+      <default>250</default>
+      <summary>Show Applications transition duration</summary>
+      <description>Duration in milliseconds for transitioning between the Activities overview and the application grid.</description>
+    </key>
+    <key name="system-app-grid-duration-ms" type="i">
+      <default>400</default>
+      <summary>App grid animation duration</summary>
+      <description>Duration in milliseconds for switching to and from the app grid view.</description>
+    </key>
+    <key name="system-workspace-switch-duration-ms" type="i">
+      <default>250</default>
+      <summary>Workspace switch animation duration</summary>
+      <description>Duration in milliseconds for workspace switching animations.</description>
+    </key>
+    <key name="system-search-duration-ms" type="i">
+      <default>150</default>
+      <summary>Search fade animation duration</summary>
+      <description>Duration in milliseconds for search results fade-in and fade-out.</description>
+    </key>
+    <key name="system-app-folder-duration-ms" type="i">
+      <default>200</default>
+      <summary>App folder animation duration</summary>
+      <description>Duration in milliseconds for opening and closing app folders in the app grid.</description>
+    </key>
+    <key name="system-osd-duration-ms" type="i">
+      <default>250</default>
+      <summary>OSD popup animation duration</summary>
+      <description>Duration in milliseconds for on-screen display popups like volume and brightness.</description>
+    </key>
+
+    <key name="window-open-enabled" type="b"><default>true</default><summary>Window open enabled</summary><description>Animate normal windows when they open.</description></key>
+    <key name="window-open-preset" type="s"><default>'Glide In'</default><summary>Window open preset</summary><description>Preset used for normal windows opening.</description></key>
+    <key name="window-open-duration-ms" type="i"><default>240</default><summary>Window open duration</summary><description>Duration in milliseconds for normal window opening animations.</description></key>
+    <key name="window-open-delay-ms" type="i"><default>0</default><summary>Window open delay</summary><description>Delay in milliseconds before normal window opening animations begin.</description></key>
+    <key name="window-open-intensity" type="d"><default>1.0</default><summary>Window open intensity</summary><description>Intensity multiplier for normal window opening animations.</description></key>
+
+    <key name="window-close-enabled" type="b"><default>true</default><summary>Window close enabled</summary><description>Animate normal windows when they close.</description></key>
+    <key name="window-close-preset" type="s"><default>'Glide Out'</default><summary>Window close preset</summary><description>Preset used for normal windows closing.</description></key>
+    <key name="window-close-duration-ms" type="i"><default>220</default><summary>Window close duration</summary><description>Duration in milliseconds for normal window closing animations.</description></key>
+    <key name="window-close-delay-ms" type="i"><default>0</default><summary>Window close delay</summary><description>Delay in milliseconds before normal window closing animations begin.</description></key>
+    <key name="window-close-intensity" type="d"><default>1.0</default><summary>Window close intensity</summary><description>Intensity multiplier for normal window closing animations.</description></key>
+
+    <key name="window-minimize-enabled" type="b"><default>true</default><summary>Window minimize enabled</summary><description>Animate normal windows when they minimize.</description></key>
+    <key name="window-minimize-preset" type="s"><default>'Dock Funnel'</default><summary>Window minimize preset</summary><description>Preset used for normal windows minimizing.</description></key>
+    <key name="window-minimize-duration-ms" type="i"><default>280</default><summary>Window minimize duration</summary><description>Duration in milliseconds for normal window minimizing animations.</description></key>
+    <key name="window-minimize-delay-ms" type="i"><default>0</default><summary>Window minimize delay</summary><description>Delay in milliseconds before normal window minimizing animations begin.</description></key>
+    <key name="window-minimize-intensity" type="d"><default>1.0</default><summary>Window minimize intensity</summary><description>Intensity multiplier for normal window minimizing animations.</description></key>
+
+    <key name="window-unminimize-enabled" type="b"><default>true</default><summary>Window unminimize enabled</summary><description>Animate normal windows when they are restored.</description></key>
+    <key name="window-unminimize-preset" type="s"><default>'Dock Return'</default><summary>Window unminimize preset</summary><description>Preset used for normal windows restoring.</description></key>
+    <key name="window-unminimize-duration-ms" type="i"><default>320</default><summary>Window unminimize duration</summary><description>Duration in milliseconds for normal window restore animations.</description></key>
+    <key name="window-unminimize-delay-ms" type="i"><default>0</default><summary>Window unminimize delay</summary><description>Delay in milliseconds before normal window restore animations begin.</description></key>
+    <key name="window-unminimize-intensity" type="d"><default>1.0</default><summary>Window unminimize intensity</summary><description>Intensity multiplier for normal window restore animations.</description></key>
+
+    <key name="window-focus-enabled" type="b"><default>true</default><summary>Window focus enabled</summary><description>Animate normal windows when they receive focus.</description></key>
+    <key name="window-focus-preset" type="s"><default>'Halo Focus'</default><summary>Window focus preset</summary><description>Preset used for normal window focus changes.</description></key>
+    <key name="window-focus-duration-ms" type="i"><default>170</default><summary>Window focus duration</summary><description>Duration in milliseconds for normal window focus animations.</description></key>
+    <key name="window-focus-delay-ms" type="i"><default>0</default><summary>Window focus delay</summary><description>Delay in milliseconds before normal window focus animations begin.</description></key>
+    <key name="window-focus-intensity" type="d"><default>0.85</default><summary>Window focus intensity</summary><description>Intensity multiplier for normal window focus animations.</description></key>
+
+    <key name="window-defocus-enabled" type="b"><default>true</default><summary>Window defocus enabled</summary><description>Animate normal windows when they lose focus.</description></key>
+    <key name="window-defocus-preset" type="s"><default>'Quiet Defocus'</default><summary>Window defocus preset</summary><description>Preset used for normal window defocus changes.</description></key>
+    <key name="window-defocus-duration-ms" type="i"><default>140</default><summary>Window defocus duration</summary><description>Duration in milliseconds for normal window defocus animations.</description></key>
+    <key name="window-defocus-delay-ms" type="i"><default>0</default><summary>Window defocus delay</summary><description>Delay in milliseconds before normal window defocus animations begin.</description></key>
+    <key name="window-defocus-intensity" type="d"><default>0.75</default><summary>Window defocus intensity</summary><description>Intensity multiplier for normal window defocus animations.</description></key>
+
+    <key name="window-maximize-enabled" type="b"><default>true</default><summary>Window maximize enabled</summary><description>Animate normal windows when they maximize.</description></key>
+    <key name="window-maximize-preset" type="s"><default>'Expand Settle'</default><summary>Window maximize preset</summary><description>Preset used for normal windows maximizing.</description></key>
+    <key name="window-maximize-duration-ms" type="i"><default>220</default><summary>Window maximize duration</summary><description>Duration in milliseconds for normal window maximize animations.</description></key>
+    <key name="window-maximize-delay-ms" type="i"><default>0</default><summary>Window maximize delay</summary><description>Delay in milliseconds before normal window maximize animations begin.</description></key>
+    <key name="window-maximize-intensity" type="d"><default>0.9</default><summary>Window maximize intensity</summary><description>Intensity multiplier for normal window maximize animations.</description></key>
+
+    <key name="window-unmaximize-enabled" type="b"><default>true</default><summary>Window unmaximize enabled</summary><description>Animate normal windows when they leave a maximized state.</description></key>
+    <key name="window-unmaximize-preset" type="s"><default>'Contract Settle'</default><summary>Window unmaximize preset</summary><description>Preset used for normal windows unmaximizing.</description></key>
+    <key name="window-unmaximize-duration-ms" type="i"><default>220</default><summary>Window unmaximize duration</summary><description>Duration in milliseconds for normal window unmaximize animations.</description></key>
+    <key name="window-unmaximize-delay-ms" type="i"><default>0</default><summary>Window unmaximize delay</summary><description>Delay in milliseconds before normal window unmaximize animations begin.</description></key>
+    <key name="window-unmaximize-intensity" type="d"><default>0.9</default><summary>Window unmaximize intensity</summary><description>Intensity multiplier for normal window unmaximize animations.</description></key>
+
+    <key name="window-move-start-enabled" type="b"><default>true</default><summary>Window move start enabled</summary><description>Animate normal windows when dragging begins.</description></key>
+    <key name="window-move-start-preset" type="s"><default>'Grip Pulse'</default><summary>Window move start preset</summary><description>Preset used for drag-start window motion.</description></key>
+    <key name="window-move-start-duration-ms" type="i"><default>120</default><summary>Window move start duration</summary><description>Duration in milliseconds for window move start animations.</description></key>
+    <key name="window-move-start-delay-ms" type="i"><default>0</default><summary>Window move start delay</summary><description>Delay in milliseconds before window move start animations begin.</description></key>
+    <key name="window-move-start-intensity" type="d"><default>0.75</default><summary>Window move start intensity</summary><description>Intensity multiplier for window move start animations.</description></key>
+
+    <key name="window-move-stop-enabled" type="b"><default>true</default><summary>Window move stop enabled</summary><description>Animate normal windows when dragging ends.</description></key>
+    <key name="window-move-stop-preset" type="s"><default>'Wobble Settle'</default><summary>Window move stop preset</summary><description>Preset used for drag-end window motion.</description></key>
+    <key name="window-move-stop-duration-ms" type="i"><default>190</default><summary>Window move stop duration</summary><description>Duration in milliseconds for window move stop animations.</description></key>
+    <key name="window-move-stop-delay-ms" type="i"><default>0</default><summary>Window move stop delay</summary><description>Delay in milliseconds before window move stop animations begin.</description></key>
+    <key name="window-move-stop-intensity" type="d"><default>0.8</default><summary>Window move stop intensity</summary><description>Intensity multiplier for window move stop animations.</description></key>
+
+    <key name="window-resize-start-enabled" type="b"><default>true</default><summary>Window resize start enabled</summary><description>Animate normal windows when resizing begins.</description></key>
+    <key name="window-resize-start-preset" type="s"><default>'Edge Tension'</default><summary>Window resize start preset</summary><description>Preset used for resize-start window motion.</description></key>
+    <key name="window-resize-start-duration-ms" type="i"><default>120</default><summary>Window resize start duration</summary><description>Duration in milliseconds for window resize start animations.</description></key>
+    <key name="window-resize-start-delay-ms" type="i"><default>0</default><summary>Window resize start delay</summary><description>Delay in milliseconds before window resize start animations begin.</description></key>
+    <key name="window-resize-start-intensity" type="d"><default>0.75</default><summary>Window resize start intensity</summary><description>Intensity multiplier for window resize start animations.</description></key>
+
+    <key name="window-resize-stop-enabled" type="b"><default>true</default><summary>Window resize stop enabled</summary><description>Animate normal windows when resizing ends.</description></key>
+    <key name="window-resize-stop-preset" type="s"><default>'Elastic Settle'</default><summary>Window resize stop preset</summary><description>Preset used for resize-end window motion.</description></key>
+    <key name="window-resize-stop-duration-ms" type="i"><default>190</default><summary>Window resize stop duration</summary><description>Duration in milliseconds for window resize stop animations.</description></key>
+    <key name="window-resize-stop-delay-ms" type="i"><default>0</default><summary>Window resize stop delay</summary><description>Delay in milliseconds before window resize stop animations begin.</description></key>
+    <key name="window-resize-stop-intensity" type="d"><default>0.8</default><summary>Window resize stop intensity</summary><description>Intensity multiplier for window resize stop animations.</description></key>
+
+    <key name="dialog-open-enabled" type="b"><default>true</default><summary>Dialog open enabled</summary><description>Animate dialog windows when they open.</description></key>
+    <key name="dialog-open-preset" type="s"><default>'Bloom In'</default><summary>Dialog open preset</summary><description>Preset used for dialog windows opening.</description></key>
+    <key name="dialog-open-duration-ms" type="i"><default>220</default><summary>Dialog open duration</summary><description>Duration in milliseconds for dialog opening animations.</description></key>
+    <key name="dialog-open-delay-ms" type="i"><default>0</default><summary>Dialog open delay</summary><description>Delay in milliseconds before dialog opening animations begin.</description></key>
+    <key name="dialog-open-intensity" type="d"><default>1.0</default><summary>Dialog open intensity</summary><description>Intensity multiplier for dialog opening animations.</description></key>
+
+    <key name="dialog-close-enabled" type="b"><default>true</default><summary>Dialog close enabled</summary><description>Animate dialog windows when they close.</description></key>
+    <key name="dialog-close-preset" type="s"><default>'Shutter Out'</default><summary>Dialog close preset</summary><description>Preset used for dialog windows closing.</description></key>
+    <key name="dialog-close-duration-ms" type="i"><default>210</default><summary>Dialog close duration</summary><description>Duration in milliseconds for dialog closing animations.</description></key>
+    <key name="dialog-close-delay-ms" type="i"><default>0</default><summary>Dialog close delay</summary><description>Delay in milliseconds before dialog closing animations begin.</description></key>
+    <key name="dialog-close-intensity" type="d"><default>1.0</default><summary>Dialog close intensity</summary><description>Intensity multiplier for dialog closing animations.</description></key>
+
+    <key name="dialog-focus-enabled" type="b"><default>true</default><summary>Dialog focus enabled</summary><description>Animate dialog windows when they receive focus.</description></key>
+    <key name="dialog-focus-preset" type="s"><default>'Pulse Focus'</default><summary>Dialog focus preset</summary><description>Preset used for dialog focus changes.</description></key>
+    <key name="dialog-focus-duration-ms" type="i"><default>160</default><summary>Dialog focus duration</summary><description>Duration in milliseconds for dialog focus animations.</description></key>
+    <key name="dialog-focus-delay-ms" type="i"><default>0</default><summary>Dialog focus delay</summary><description>Delay in milliseconds before dialog focus animations begin.</description></key>
+    <key name="dialog-focus-intensity" type="d"><default>0.85</default><summary>Dialog focus intensity</summary><description>Intensity multiplier for dialog focus animations.</description></key>
+
+    <key name="dialog-defocus-enabled" type="b"><default>true</default><summary>Dialog defocus enabled</summary><description>Animate dialog windows when they lose focus.</description></key>
+    <key name="dialog-defocus-preset" type="s"><default>'Fade Dim'</default><summary>Dialog defocus preset</summary><description>Preset used for dialog defocus changes.</description></key>
+    <key name="dialog-defocus-duration-ms" type="i"><default>130</default><summary>Dialog defocus duration</summary><description>Duration in milliseconds for dialog defocus animations.</description></key>
+    <key name="dialog-defocus-delay-ms" type="i"><default>0</default><summary>Dialog defocus delay</summary><description>Delay in milliseconds before dialog defocus animations begin.</description></key>
+    <key name="dialog-defocus-intensity" type="d"><default>0.75</default><summary>Dialog defocus intensity</summary><description>Intensity multiplier for dialog defocus animations.</description></key>
+
+    <key name="modaldialog-open-enabled" type="b"><default>true</default><summary>Modal dialog open enabled</summary><description>Animate modal dialogs when they open.</description></key>
+    <key name="modaldialog-open-preset" type="s"><default>'Drift Up'</default><summary>Modal dialog open preset</summary><description>Preset used for modal dialogs opening.</description></key>
+    <key name="modaldialog-open-duration-ms" type="i"><default>240</default><summary>Modal dialog open duration</summary><description>Duration in milliseconds for modal dialog opening animations.</description></key>
+    <key name="modaldialog-open-delay-ms" type="i"><default>0</default><summary>Modal dialog open delay</summary><description>Delay in milliseconds before modal dialog opening animations begin.</description></key>
+    <key name="modaldialog-open-intensity" type="d"><default>1.0</default><summary>Modal dialog open intensity</summary><description>Intensity multiplier for modal dialog opening animations.</description></key>
+
+    <key name="modaldialog-close-enabled" type="b"><default>true</default><summary>Modal dialog close enabled</summary><description>Animate modal dialogs when they close.</description></key>
+    <key name="modaldialog-close-preset" type="s"><default>'Fade Out'</default><summary>Modal dialog close preset</summary><description>Preset used for modal dialog closing.</description></key>
+    <key name="modaldialog-close-duration-ms" type="i"><default>200</default><summary>Modal dialog close duration</summary><description>Duration in milliseconds for modal dialog closing animations.</description></key>
+    <key name="modaldialog-close-delay-ms" type="i"><default>0</default><summary>Modal dialog close delay</summary><description>Delay in milliseconds before modal dialog closing animations begin.</description></key>
+    <key name="modaldialog-close-intensity" type="d"><default>1.0</default><summary>Modal dialog close intensity</summary><description>Intensity multiplier for modal dialog closing animations.</description></key>
+
+    <key name="modaldialog-focus-enabled" type="b"><default>true</default><summary>Modal dialog focus enabled</summary><description>Animate modal dialogs when they receive focus.</description></key>
+    <key name="modaldialog-focus-preset" type="s"><default>'Settle Focus'</default><summary>Modal dialog focus preset</summary><description>Preset used for modal dialog focus changes.</description></key>
+    <key name="modaldialog-focus-duration-ms" type="i"><default>150</default><summary>Modal dialog focus duration</summary><description>Duration in milliseconds for modal dialog focus animations.</description></key>
+    <key name="modaldialog-focus-delay-ms" type="i"><default>0</default><summary>Modal dialog focus delay</summary><description>Delay in milliseconds before modal dialog focus animations begin.</description></key>
+    <key name="modaldialog-focus-intensity" type="d"><default>0.8</default><summary>Modal dialog focus intensity</summary><description>Intensity multiplier for modal dialog focus animations.</description></key>
+
+    <key name="modaldialog-defocus-enabled" type="b"><default>true</default><summary>Modal dialog defocus enabled</summary><description>Animate modal dialogs when they lose focus.</description></key>
+    <key name="modaldialog-defocus-preset" type="s"><default>'Quiet Defocus'</default><summary>Modal dialog defocus preset</summary><description>Preset used for modal dialog defocus changes.</description></key>
+    <key name="modaldialog-defocus-duration-ms" type="i"><default>130</default><summary>Modal dialog defocus duration</summary><description>Duration in milliseconds for modal dialog defocus animations.</description></key>
+    <key name="modaldialog-defocus-delay-ms" type="i"><default>0</default><summary>Modal dialog defocus delay</summary><description>Delay in milliseconds before modal dialog defocus animations begin.</description></key>
+    <key name="modaldialog-defocus-intensity" type="d"><default>0.75</default><summary>Modal dialog defocus intensity</summary><description>Intensity multiplier for modal dialog defocus animations.</description></key>
+
+    <key name="notification-open-enabled" type="b"><default>true</default><summary>Notification open enabled</summary><description>Animate notification banners when they open.</description></key>
+    <key name="notification-open-preset" type="s"><default>'Drift Up'</default><summary>Notification open preset</summary><description>Preset used for notification banners opening.</description></key>
+    <key name="notification-open-duration-ms" type="i"><default>220</default><summary>Notification open duration</summary><description>Duration in milliseconds for notification opening animations.</description></key>
+    <key name="notification-open-delay-ms" type="i"><default>0</default><summary>Notification open delay</summary><description>Delay in milliseconds before notification opening animations begin.</description></key>
+    <key name="notification-open-intensity" type="d"><default>1.0</default><summary>Notification open intensity</summary><description>Intensity multiplier for notification opening animations.</description></key>
+
+    <key name="notification-close-enabled" type="b"><default>true</default><summary>Notification close enabled</summary><description>Animate notification banners when they close.</description></key>
+    <key name="notification-close-preset" type="s"><default>'Fade Out'</default><summary>Notification close preset</summary><description>Preset used for notification banners closing.</description></key>
+    <key name="notification-close-duration-ms" type="i"><default>180</default><summary>Notification close duration</summary><description>Duration in milliseconds for notification closing animations.</description></key>
+    <key name="notification-close-delay-ms" type="i"><default>0</default><summary>Notification close delay</summary><description>Delay in milliseconds before notification closing animations begin.</description></key>
+    <key name="notification-close-intensity" type="d"><default>1.0</default><summary>Notification close intensity</summary><description>Intensity multiplier for notification closing animations.</description></key>
+
+    <!-- Gesture overrides -->
+    <key name="gesture-overrides-enabled" type="b">
+      <default>false</default>
+      <summary>Enable touchpad gesture overrides</summary>
+      <description>Master switch for custom three-finger and four-finger swipe behaviour.</description>
+    </key>
+    <key name="gesture-3f-swipe-up" type="s">
+      <default>'default'</default>
+      <summary>Three-finger swipe up action</summary>
+      <description>Action for a three-finger upward swipe.</description>
+    </key>
+    <key name="gesture-3f-swipe-down" type="s">
+      <default>'default'</default>
+      <summary>Three-finger swipe down action</summary>
+      <description>Action for a three-finger downward swipe.</description>
+    </key>
+    <key name="gesture-3f-swipe-left" type="s">
+      <default>'disabled'</default>
+      <summary>Three-finger swipe left action</summary>
+      <description>Action for a three-finger leftward swipe. No default GNOME binding.</description>
+    </key>
+    <key name="gesture-3f-swipe-right" type="s">
+      <default>'disabled'</default>
+      <summary>Three-finger swipe right action</summary>
+      <description>Action for a three-finger rightward swipe. No default GNOME binding.</description>
+    </key>
+    <key name="gesture-4f-swipe-up" type="s">
+      <default>'disabled'</default>
+      <summary>Four-finger swipe up action</summary>
+      <description>Action for a four-finger upward swipe. No default GNOME binding.</description>
+    </key>
+    <key name="gesture-4f-swipe-down" type="s">
+      <default>'disabled'</default>
+      <summary>Four-finger swipe down action</summary>
+      <description>Action for a four-finger downward swipe. No default GNOME binding.</description>
+    </key>
+    <key name="gesture-4f-swipe-left" type="s">
+      <default>'default'</default>
+      <summary>Four-finger swipe left action</summary>
+      <description>Action for a four-finger leftward swipe.</description>
+    </key>
+    <key name="gesture-4f-swipe-right" type="s">
+      <default>'default'</default>
+      <summary>Four-finger swipe right action</summary>
+      <description>Action for a four-finger rightward swipe.</description>
+    </key>
+
+    <!-- Tile gaps -->
+    <key name="tile-gaps-enabled" type="b">
+      <default>false</default>
+      <summary>Enable tile gaps</summary>
+      <description>Master switch for adding pixel gaps between tiled windows and screen edges.</description>
+    </key>
+    <key name="tile-gap-inner" type="i">
+      <default>8</default>
+      <summary>Inner tile gap</summary>
+      <description>Pixel gap between adjacent tiled windows (0–64).</description>
+    </key>
+    <key name="tile-gap-outer" type="i">
+      <default>8</default>
+      <summary>Outer tile gap</summary>
+      <description>Pixel gap between tiled windows and screen edges (0–64).</description>
+    </key>
+
+    <!-- Top bar overrides -->
+    <key name="topbar-overrides-enabled" type="b">
+      <default>false</default>
+      <summary>Enable top bar overrides</summary>
+      <description>Master switch for custom top bar appearance tweaks (activities button, clock format, spacing).</description>
+    </key>
+    <key name="activities-button-visible" type="b">
+      <default>true</default>
+      <summary>Activities button visible</summary>
+      <description>Show or hide the Activities button in the top bar.</description>
+    </key>
+    <key name="activities-button-text" type="s">
+      <default>''</default>
+      <summary>Activities button text</summary>
+      <description>Custom text for the Activities button. Empty string keeps the default label.</description>
+    </key>
+    <key name="clock-custom-format-enabled" type="b">
+      <default>false</default>
+      <summary>Enable custom clock format</summary>
+      <description>Use a custom GLib format string for the top bar clock instead of the built-in format.</description>
+    </key>
+    <key name="clock-custom-format" type="s">
+      <default>'%a %b %e  %H:%M:%S'</default>
+      <summary>Custom clock format string</summary>
+      <description>A GLib date/time format string for the top bar clock. Only applied when custom clock format is enabled. Common tokens: %H (24h hour), %I (12h hour), %M (minute), %S (second), %a (weekday), %b (month), %e (day), %p (AM/PM).</description>
+    </key>
+    <key name="panel-icon-spacing" type="i">
+      <default>-1</default>
+      <summary>Panel indicator spacing</summary>
+      <description>Horizontal padding in pixels applied to each top bar indicator. -1 means use the default theme spacing.</description>
+    </key>
+
+    <key name="panel-layout" type="s">
+      <default>''</default>
+      <summary>Top bar panel layout</summary>
+      <description>JSON mapping panel items to zones and positions. Format: {"left":["activities"],"center":["dateMenu"],"right":["a11y","keyboard","quickSettings"]}. Empty string means default GNOME layout.</description>
+    </key>
+
+    <key name="panel-items-available" type="s">
+      <default>''</default>
+      <summary>Available panel items</summary>
+      <description>JSON object written by the shell extension listing the actual items in the GNOME Shell panel. Format: {"left":["activities"],"center":["dateMenu"],"right":["a11y","keyboard","quickSettings"]}. Empty string means the extension has not reported yet.</description>
+    </key>
+  </schema>
+</schemalist>

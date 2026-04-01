@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 More Tweaks Contributors -->
+<component type="desktop-application">
+  <id>com.n14395.MoreTweaks</id>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+
+  <name>More Tweaks</name>
+  <summary>A GUI for hidden GNOME desktop tweaks and settings</summary>
+
+  <description>
+    <p>
+      More Tweaks exposes hundreds of hidden GNOME desktop settings that are
+      not available in the standard Settings application. Toggle behaviors,
+      adjust thresholds, manage lockdown policies, and fine-tune your desktop
+      without touching the terminal.
+    </p>
+    <p>
+      The app includes a bundled GNOME Shell extension that enables custom
+      window and notification animation profiles, with preset-based controls
+      for duration, delay, and intensity.
+    </p>
+  </description>
+
+  <developer id="com.n14395">
+    <name>More Tweaks Contributors</name>
+  </developer>
+
+  <launchable type="desktop-id">com.n14395.MoreTweaks.desktop</launchable>
+
+  <url type="homepage">https://github.com/n14395/more-gnome-tweaks</url>
+  <url type="bugtracker">https://github.com/n14395/more-gnome-tweaks/issues</url>
+  <url type="vcs-browser">https://github.com/n14395/more-gnome-tweaks</url>
+
+  <branding>
+    <color type="primary" scheme_preference="light">#e8f0fe</color>
+    <color type="primary" scheme_preference="dark">#1a3a5c</color>
+  </branding>
+
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="1.0.4" date="2026-03-27">
+      <description>
+        <p>Animation system overhaul and polish.</p>
+        <ul>
+          <li>Native keyboard shortcut recorder for keybinding controls</li>
+          <li>Tabbed animation groups (System, Windows, Window States, etc.)</li>
+          <li>System animation timing overrides (overview, app grid, workspace switch, etc.)</li>
+          <li>Renamed extension prefix to com.n14395</li>
+          <li>Animation controls greyed out until extension is installed</li>
+          <li>Removed redundant value labels from tweak rows</li>
+          <li>Fixed scroll behaviour for categories with few controls</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.0.1" date="2026-03-26">
+      <description>
+        <p>UI improvements and polish.</p>
+        <ul>
+          <li>About dialog, primary menu, and keyboard shortcuts</li>
+          <li>Global search across all categories</li>
+          <li>Adaptive sidebar layout with Adw.NavigationSplitView</li>
+          <li>Copy gsettings command button on each tweak</li>
+          <li>Per-tweak reset-to-default button</li>
+          <li>Drag-and-drop list editor for array settings</li>
+          <li>Reorganized animation section into focused groups</li>
+        </ul>
+      </description>
+    </release>
+    <release version="1.0.0" date="2026-03-26">
+      <description>
+        <p>Initial release of More Tweaks.</p>
+        <ul>
+          <li>250+ hidden GNOME desktop tweaks across 19 categories</li>
+          <li>Bundled GNOME Shell animation runtime with 57 presets and 5 curated profiles</li>
+          <li>Full-text search and category filtering</li>
+        </ul>
+      </description>
+    </release>
+  </releases>
+
+  <requires>
+    <display_length compare="ge">360</display_length>
+  </requires>
+  <supports>
+    <control>pointing</control>
+    <control>keyboard</control>
+    <control>touch</control>
+  </supports>
+</component>
