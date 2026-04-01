@@ -135,7 +135,7 @@ CATEGORIES: tuple[Category, ...] = (
         id="apps-terminal",
         name="Terminal",
         description="Settings for GNOME Terminal.",
-        icon_name="org.gnome.Terminal-symbolic",
+        icon_name="utilities-terminal-symbolic",
         parent="apps",
     ),
     Category(
@@ -149,21 +149,21 @@ CATEGORIES: tuple[Category, ...] = (
         id="apps-screenshot",
         name="Screenshot",
         description="Settings for GNOME Screenshot.",
-        icon_name="org.gnome.Screenshot-symbolic",
+        icon_name="applets-screenshooter-symbolic",
         parent="apps",
     ),
     Category(
         id="apps-clocks",
         name="Clocks",
         description="Settings for GNOME Clocks.",
-        icon_name="org.gnome.clocks-symbolic",
+        icon_name="preferences-system-time-symbolic",
         parent="apps",
     ),
     Category(
         id="apps-editor",
         name="Text Editor",
         description="Settings for GNOME Text Editor.",
-        icon_name="org.gnome.TextEditor-symbolic",
+        icon_name="text-editor-symbolic",
         parent="apps",
     ),
 )

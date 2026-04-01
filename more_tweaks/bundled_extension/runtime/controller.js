@@ -1182,10 +1182,21 @@ class TopBarManager {
             this._clockTimerId = null;
         }
         const dateMenu = Main.panel.statusArea?.dateMenu;
-        if (dateMenu && this._origClockUpdate) {
+        if (!dateMenu) return;
+
+        if (this._origClockUpdate) {
+            // Restore the original _updateClock method and trigger it
             dateMenu._updateClock = this._origClockUpdate;
             this._origClockUpdate = null;
             try { dateMenu._updateClock(); } catch { /* */ }
+        } else {
+            // _updateClock didn't exist originally (GNOME 45+ uses
+            // bind_property); remove our override and refresh from WallClock
+            delete dateMenu._updateClock;
+            try {
+                if (dateMenu._clock && dateMenu._clockDisplay)
+                    dateMenu._clockDisplay.text = dateMenu._clock.clock;
+            } catch { /* */ }
         }
     }
 
