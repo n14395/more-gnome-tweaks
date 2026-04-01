@@ -3545,6 +3545,7 @@ class MoreTweaksWindow(Adw.ApplicationWindow):
         self.category_list.add_css_class("navigation-sidebar")
         self.category_list.set_valign(Gtk.Align.FILL)
         self.category_list.connect("row-selected", self._on_category_selected)
+        self.category_list.connect("row-activated", self._on_category_activated)
 
         self.category_rows: dict[Gtk.ListBoxRow, Category] = {}
         self._child_rows: dict[str, list[Gtk.ListBoxRow]] = {}
@@ -3662,9 +3663,20 @@ class MoreTweaksWindow(Adw.ApplicationWindow):
     def _on_category_selected(self, _listbox: Gtk.ListBox, row: Gtk.ListBoxRow | None):
         if row is None:
             return
-
         category = self.category_rows[row]
+        # Parent-only categories (e.g. "Apps") have no content of their own —
+        # selection is handled by their children.
+        if category.id in self._child_rows:
+            return
+        self.selected_category = category.id
+        self._update_category_header()
+        self.refresh_rows()
 
+    def _on_category_activated(self, _listbox: Gtk.ListBox, row: Gtk.ListBoxRow):
+        """Fired on every click, even if the row is already selected."""
+        category = self.category_rows.get(row)
+        if category is None:
+            return
         # Toggle expand/collapse for parent categories with children
         if category.id in self._child_rows:
             child_rows = self._child_rows[category.id]
@@ -3676,10 +3688,9 @@ class MoreTweaksWindow(Adw.ApplicationWindow):
                 arrow.set_from_icon_name(
                     "pan-down-symbolic" if expanding else "pan-end-symbolic"
                 )
-
-        self.selected_category = category.id
-        self._update_category_header()
-        self.refresh_rows()
+            # Auto-select the first child when expanding
+            if expanding:
+                self.category_list.select_row(child_rows[0])
 
     def _on_external_change(self, schema: str, key: str):
         for row in self.rendered_rows:
