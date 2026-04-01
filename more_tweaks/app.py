@@ -57,6 +57,11 @@ class MoreTweaksApplication(Adw.Application):
         self.add_action(reset_action)
         self.set_accels_for_action("app.reset-focused", ["<Control>r"])
 
+        # Reset all settings
+        reset_all_action = Gio.SimpleAction.new("reset-all", None)
+        reset_all_action.connect("activate", self._on_reset_all)
+        self.add_action(reset_all_action)
+
         # Ctrl+Shift+F → toggle sidebar
         sidebar_action = Gio.SimpleAction.new("toggle-sidebar", None)
         sidebar_action.connect("activate", self._on_toggle_sidebar)
@@ -101,6 +106,11 @@ class MoreTweaksApplication(Adw.Application):
         window = self.props.active_window
         if window is not None and hasattr(window, "reset_focused_tweak"):
             window.reset_focused_tweak()
+
+    def _on_reset_all(self, _action, _param):
+        window = self.props.active_window
+        if window is not None and hasattr(window, "reset_all_settings"):
+            window.reset_all_settings()
 
     def _on_toggle_sidebar(self, _action, _param):
         window = self.props.active_window

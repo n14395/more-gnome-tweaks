@@ -3199,6 +3199,7 @@ class MoreTweaksWindow(Adw.ApplicationWindow):
 
         # Primary menu (hamburger menu)
         menu = Gio.Menu()
+        menu.append("Reset All Settings", "app.reset-all")
         menu.append("Keyboard Shortcuts", "app.shortcuts")
         menu.append("About More Tweaks", "app.about")
         menu.append("Quit", "app.quit")
@@ -3506,6 +3507,102 @@ class MoreTweaksWindow(Adw.ApplicationWindow):
                 row = TweakRow(tweak, self.backend)
             self.rendered_rows.append(row)
             self.group.add(row)
+
+    # ── Reset All ─────────────────────────────────────────────────────
+
+    def reset_all_settings(self):
+        """Show a confirmation dialog, then reset every non-default setting."""
+        tweaks_changed, ext_changed = self._count_changed_settings()
+        total = tweaks_changed + ext_changed
+        if total == 0:
+            self._show_toast("All settings are already at their defaults")
+            return
+
+        dialog = Adw.AlertDialog()
+        dialog.set_heading("Reset All Settings?")
+        parts = []
+        if tweaks_changed:
+            parts.append(f"{tweaks_changed} system tweak{'s' if tweaks_changed != 1 else ''}")
+        if ext_changed:
+            parts.append(f"{ext_changed} extension setting{'s' if ext_changed != 1 else ''}")
+        dialog.set_body(
+            f"This will reset {' and '.join(parts)} back to their GNOME defaults. "
+            "This cannot be undone."
+        )
+        dialog.add_response("cancel", "Cancel")
+        dialog.add_response("reset", "Reset All")
+        dialog.set_response_appearance("reset", Adw.ResponseAppearance.DESTRUCTIVE)
+        dialog.set_default_response("cancel")
+        dialog.set_close_response("cancel")
+        dialog.connect("response", self._on_reset_all_response)
+        dialog.present(self)
+
+    def _on_reset_all_response(self, _dialog, response: str):
+        if response != "reset":
+            return
+        count = self._do_reset_all()
+        self._refresh_all_sections()
+        self._show_toast(f"{count} settings reset to defaults")
+
+    def _count_changed_settings(self) -> tuple[int, int]:
+        """Return (tweaks_changed, extension_changed) counts."""
+        tweaks_changed = 0
+        seen: set[tuple[str, str]] = set()
+        for tweak in TWEAKS:
+            pair = (tweak.schema, tweak.key)
+            if pair in seen:
+                continue
+            seen.add(pair)
+            if not self.backend.is_available(tweak):
+                continue
+            if not self.backend.is_default(tweak):
+                tweaks_changed += 1
+
+        ext_changed = 0
+        ab = self.animation_section.backend
+        if ab.available and ab._settings is not None and ab._schema is not None:
+            for key in ab._schema.list_keys():
+                if key in self._EPHEMERAL_EXTENSION_KEYS:
+                    continue
+                current = ab._settings.get_value(key)
+                default = ab._settings.get_default_value(key)
+                if default is not None and not current.equal(default):
+                    ext_changed += 1
+        return tweaks_changed, ext_changed
+
+    def _do_reset_all(self) -> int:
+        """Reset every non-default tweak and extension key.  Returns count."""
+        count = 0
+
+        # GSettings tweaks
+        seen: set[tuple[str, str]] = set()
+        for tweak in TWEAKS:
+            pair = (tweak.schema, tweak.key)
+            if pair in seen:
+                continue
+            seen.add(pair)
+            if not self.backend.is_available(tweak):
+                continue
+            if self.backend.is_default(tweak):
+                continue
+            if self.backend.reset(tweak):
+                count += 1
+
+        # Extension settings
+        ab = self.animation_section.backend
+        if ab.available and ab._settings is not None and ab._schema is not None:
+            for key in ab._schema.list_keys():
+                if key in self._EPHEMERAL_EXTENSION_KEYS:
+                    continue
+                current = ab._settings.get_value(key)
+                default = ab._settings.get_default_value(key)
+                if default is not None and not current.equal(default):
+                    try:
+                        ab._settings.reset(key)
+                        count += 1
+                    except Exception:
+                        continue
+        return count
 
     # ── Export / Import ───────────────────────────────────────────────
 
