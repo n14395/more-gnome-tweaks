@@ -371,6 +371,8 @@ class SettingsBackend:
             return value[0] if value else ""
         if tweak.control == "text-list":
             return ", ".join(value) if isinstance(value, list) else str(value)
+        if tweak.value_type == "tuple-ii" and isinstance(value, tuple):
+            return f"{value[0]}, {value[1]}"
         return value
 
     def write(self, tweak: Tweak, value) -> bool:
@@ -404,6 +406,13 @@ class SettingsBackend:
 
             if tweak.control == "text-list":
                 value = [v.strip() for v in str(value).split(",") if v.strip()]
+                return settings.set_value(tweak.key, GLib.Variant(type_string, value))
+
+            if tweak.value_type == "tuple-ii":
+                parts = [p.strip() for p in str(value).split(",")]
+                if len(parts) != 2:
+                    return False
+                value = (int(parts[0]), int(parts[1]))
                 return settings.set_value(tweak.key, GLib.Variant(type_string, value))
 
             return settings.set_value(tweak.key, GLib.Variant(type_string, value))
