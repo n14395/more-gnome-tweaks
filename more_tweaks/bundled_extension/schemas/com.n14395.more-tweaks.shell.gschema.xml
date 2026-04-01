@@ -350,6 +350,12 @@
       <description>Apply the icon color override to non-symbolic (third-party) icons on the top bar using a GPU tint effect.</description>
     </key>
 
+    <key name="panel-color-activities" type="b">
+      <default>true</default>
+      <summary>Colour Activities / workspace indicator</summary>
+      <description>Apply the icon color override to the Activities overview button in the top-left corner.</description>
+    </key>
+
     <key name="panel-layout" type="s">
       <default>''</default>
       <summary>Top bar panel layout</summary>

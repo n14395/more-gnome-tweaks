@@ -1920,6 +1920,20 @@ class TopBarSection(_ScrollPreservingSection):
         color_group.add(color_other_row)
         self._topbar_widgets["panel-color-other"] = color_other_switch
 
+        color_act_row = Adw.ActionRow(
+            title="Colour Activities indicator",
+            subtitle="Tint the workspace overview button in the top-left corner.",
+        )
+        color_act_switch = Gtk.Switch(valign=Gtk.Align.CENTER)
+        color_act_switch.set_active(
+            ab._get_boolean("panel-color-activities", default=True))
+        color_act_switch.set_sensitive(enabled)
+        color_act_switch.connect("notify::active", self._on_topbar_bool_changed,
+                                 "panel-color-activities")
+        color_act_row.add_suffix(color_act_switch)
+        color_group.add(color_act_row)
+        self._topbar_widgets["panel-color-activities"] = color_act_switch
+
         color_row = Adw.ActionRow(
             title="Icon color",
             subtitle="Choose the colour to apply to the enabled icon types above.",

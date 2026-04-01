@@ -1157,10 +1157,19 @@ class TopBarManager {
         this._origClockUpdate = null;
         this._clockTimerId = null;
         this._styledChildren = [];
+        this._deferredApplyId = null;
     }
 
     enable() {
         this._apply();
+        // Re-apply after a short delay so that third-party indicators
+        // (SNI/AppIndicator) that load their icons asynchronously after
+        // session start get colored too.
+        this._deferredApplyId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 3000, () => {
+            this._deferredApplyId = null;
+            this._apply();
+            return GLib.SOURCE_REMOVE;
+        });
         for (const key of [
             'topbar-overrides-enabled',
             'activities-button-visible',
@@ -1170,6 +1179,7 @@ class TopBarManager {
             'panel-icon-color',
             'panel-color-symbolic',
             'panel-color-other',
+            'panel-color-activities',
         ]) {
             try {
                 const id = this._settings.connect(`changed::${key}`, () => this._apply());
@@ -1179,6 +1189,10 @@ class TopBarManager {
     }
 
     disable() {
+        if (this._deferredApplyId) {
+            GLib.source_remove(this._deferredApplyId);
+            this._deferredApplyId = null;
+        }
         for (const id of this._signalIds)
             this._settings.disconnect(id);
         this._signalIds = [];
@@ -1317,52 +1331,74 @@ class TopBarManager {
         try { colorOther = this._settings.get_boolean('panel-color-other'); }
         catch (_e) { /* key missing — default true */ }
 
+        // Build combined CSS for indicator containers (spacing + color)
+        let containerCss = '';
+        if (spacingCss) containerCss += spacingCss + ' ';
+        if (colorCss && colorSymbolic) containerCss += colorCss;
+        containerCss = containerCss.trim() || null;
+
         for (const box of [Main.panel._leftBox, Main.panel._centerBox, Main.panel._rightBox]) {
             for (const child of box.get_children()) {
-                if (spacingCss) {
-                    child.set_style(spacingCss);
+                // Apply combined spacing + color to the container itself
+                if (containerCss && typeof child.set_style === 'function') {
+                    child.set_style(containerCss);
                     child.add_style_class_name('more-tweaks-panel-style');
                     this._styledChildren.push(child);
                 }
+                // Walk ALL descendants for per-widget coloring
                 if (colorCss)
                     this._colorDescendants(child, colorCss, tintColor,
                         colorSymbolic, colorOther);
             }
         }
+
+        // The Activities button / workspace indicator draws with Clutter
+        // paint, not CSS — so CSS color has no effect.  Apply a GPU tint
+        // effect directly on the indicator actor instead.
+        let colorActivities = true;
+        try { colorActivities = this._settings.get_boolean('panel-color-activities'); }
+        catch (_e) { /* key missing — default true */ }
+        if (color && colorActivities && tintColor) {
+            const activities = Main.panel.statusArea?.activities;
+            if (activities) {
+                try {
+                    activities.add_effect_with_name('more-tweaks-colorize',
+                        new Clutter.ColorizeEffect({tint: tintColor}));
+                    this._styledChildren.push(activities);
+                } catch (_e) { /* effect unavailable */ }
+            }
+        }
     }
 
     _colorDescendants(actor, css, tintColor, colorSymbolic, colorOther) {
-        if (actor instanceof St.Icon) {
-            const iconName = actor.icon_name ?? '';
-            const giconStr = actor.gicon?.to_string?.() ?? '';
-            const isSymbolic = iconName.endsWith('-symbolic') ||
-                giconStr.includes('symbolic');
-            if (isSymbolic && colorSymbolic) {
-                actor.set_style(css);
-                actor.add_style_class_name('more-tweaks-panel-style');
-                this._styledChildren.push(actor);
-            } else if (!isSymbolic && colorOther && tintColor) {
-                try {
-                    actor.add_effect_with_name('more-tweaks-colorize',
-                        new Clutter.ColorizeEffect({tint: tintColor}));
-                } catch (_e) { /* ColorizeEffect unavailable */ }
-                actor.add_style_class_name('more-tweaks-panel-style');
-                this._styledChildren.push(actor);
-            }
-        } else if (colorSymbolic && typeof actor.set_style === 'function') {
-            // Apply color to non-Icon St.Widget descendants: labels,
-            // workspace indicators, custom widgets.  Skip indicator
-            // containers (direct children of panel boxes) whose inline
-            // style is managed by the spacing logic above.
-            const isContainer = actor.get_parent?.() === Main.panel._leftBox ||
-                actor.get_parent?.() === Main.panel._centerBox ||
-                actor.get_parent?.() === Main.panel._rightBox;
-            if (!isContainer) {
+        // Skip actors already styled by the container loop
+        const already = typeof actor.has_style_class_name === 'function' &&
+            actor.has_style_class_name('more-tweaks-panel-style');
+        if (!already) {
+            if (actor instanceof St.Icon) {
+                const iconName = actor.icon_name ?? '';
+                const giconStr = actor.gicon?.to_string?.() ?? '';
+                const isSymbolic = iconName.endsWith('-symbolic') ||
+                    giconStr.includes('symbolic');
+                if (isSymbolic && colorSymbolic) {
+                    actor.set_style(css);
+                    actor.add_style_class_name('more-tweaks-panel-style');
+                    this._styledChildren.push(actor);
+                } else if (!isSymbolic && colorOther && tintColor) {
+                    try {
+                        actor.add_effect_with_name('more-tweaks-colorize',
+                            new Clutter.ColorizeEffect({tint: tintColor}));
+                    } catch (_e) { /* ColorizeEffect unavailable */ }
+                    actor.add_style_class_name('more-tweaks-panel-style');
+                    this._styledChildren.push(actor);
+                }
+            } else if (colorSymbolic && typeof actor.set_style === 'function') {
                 actor.set_style(css);
                 actor.add_style_class_name('more-tweaks-panel-style');
                 this._styledChildren.push(actor);
             }
         }
+        // Always recurse into children
         if (typeof actor.get_children === 'function') {
             for (const child of actor.get_children())
                 this._colorDescendants(child, css, tintColor,
