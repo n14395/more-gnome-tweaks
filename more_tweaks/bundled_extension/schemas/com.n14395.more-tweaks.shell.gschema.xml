@@ -259,6 +259,35 @@
       <description>Action for a four-finger rightward swipe.</description>
     </key>
 
+    <!-- Tile grid -->
+    <key name="tile-cols" type="i">
+      <default>2</default>
+      <summary>Grid columns</summary>
+      <description>Number of columns in the tiling grid (1–5).</description>
+    </key>
+    <key name="tile-rows" type="i">
+      <default>2</default>
+      <summary>Grid rows</summary>
+      <description>Number of rows in the tiling grid (1–5).</description>
+    </key>
+
+    <!-- Tile preview -->
+    <key name="tile-preview-enabled" type="b">
+      <default>true</default>
+      <summary>Enable drag preview</summary>
+      <description>Show a preview overlay and snap windows when dragging near screen edges.</description>
+    </key>
+    <key name="tile-preview-distance" type="i">
+      <default>25</default>
+      <summary>Preview edge distance</summary>
+      <description>Pixels from screen edge to trigger the tile preview (0–150).</description>
+    </key>
+    <key name="tile-preview-delay" type="i">
+      <default>500</default>
+      <summary>Preview delay</summary>
+      <description>Delay in milliseconds before the tile preview appears (25–1000).</description>
+    </key>
+
     <!-- Tile gaps -->
     <key name="tile-gaps-enabled" type="b">
       <default>false</default>
@@ -286,11 +315,6 @@
       <default>true</default>
       <summary>Activities button visible</summary>
       <description>Show or hide the Activities button in the top bar.</description>
-    </key>
-    <key name="activities-button-text" type="s">
-      <default>''</default>
-      <summary>Activities button text</summary>
-      <description>Custom text for the Activities button. Empty string keeps the default label.</description>
     </key>
     <key name="clock-custom-format-enabled" type="b">
       <default>false</default>

@@ -1448,24 +1448,6 @@ class TopBarSection(_ScrollPreservingSection):
         group.add(act_vis_row)
         self._topbar_widgets["activities-button-visible"] = act_vis_switch
 
-        # Activities button text
-        act_text_row = Adw.ActionRow(
-            title="Activities button text",
-            subtitle="Custom label (leave empty for default).",
-        )
-        act_text_entry = Gtk.Entry(
-            valign=Gtk.Align.CENTER,
-            placeholder_text="Activities",
-            width_chars=14,
-        )
-        act_text_entry.set_text(ab._get_string("activities-button-text", default=""))
-        act_text_entry.set_sensitive(enabled)
-        act_text_entry.connect("changed", self._on_topbar_text_changed,
-                               "activities-button-text")
-        act_text_row.add_suffix(act_text_entry)
-        group.add(act_text_row)
-        self._topbar_widgets["activities-button-text"] = act_text_entry
-
         self.append(group)
 
         # Clock format group
@@ -1585,6 +1567,8 @@ class TilingSection(_ScrollPreservingSection):
         self._backend = SettingsBackend()
         self._animation_backend = AnimationBackend()
         self._tweak_rows: list[TweakRow | TextListRow] = []
+        self._grid_widgets: dict[str, Gtk.Widget] = {}
+        self._preview_widgets: dict[str, Gtk.Widget] = {}
         self._gap_widgets: dict[str, Gtk.Widget] = {}
         self._updating_gaps = False
 
@@ -1603,12 +1587,14 @@ class TilingSection(_ScrollPreservingSection):
         self._animation_backend.refresh_runtime_state()
         _clear_box(self)
         self._tweak_rows.clear()
+        self._grid_widgets.clear()
+        self._preview_widgets.clear()
         self._gap_widgets.clear()
         self._updating_gaps = True
 
         # Standard GSettings tweaks — always shown
         tweaks_group = Adw.PreferencesGroup(
-            title="Tiling & Snapping Settings",
+            title="Tiling &amp; Snapping Settings",
             description="Edge snapping behavior and keyboard tile shortcuts.",
         )
         tweaks = filter_tweaks("", "tiling")
@@ -1639,7 +1625,7 @@ class TilingSection(_ScrollPreservingSection):
                     "The bundled shell runtime has been installed, but GNOME Shell "
                     "needs to restart to detect it.\n\n"
                     "On Wayland, log out and log back in. "
-                    "Tile gap controls will become available after that."
+                    "Tile grid and gap controls will become available after that."
                 ),
             ))
             self._updating_gaps = False
@@ -1650,15 +1636,17 @@ class TilingSection(_ScrollPreservingSection):
                 icon_name="application-x-addon-symbolic",
                 title="Shell Runtime Not Installed",
                 description=(
-                    "Tile gaps require the bundled GNOME Shell extension.\n\n"
+                    "Tile grid and gaps require the bundled GNOME Shell extension.\n\n"
                     "Use the Install button above to set it up."
                 ),
             ))
             self._updating_gaps = False
             return
 
-        # Tile gaps controls — extension-backed
+        # Extension-backed tiling controls
+        self._build_tile_grid_group()
         self._build_tile_gap_group()
+        self._build_tile_preview_group()
         self._updating_gaps = False
 
     def _build_tile_gap_group(self):
@@ -1726,6 +1714,116 @@ class TilingSection(_ScrollPreservingSection):
     def _on_gap_int_changed(self, spin: Gtk.SpinButton, key: str):
         if self._updating_gaps:
             return
+        self._animation_backend._set_int(key, int(spin.get_value()))
+
+    # ── Tile grid ─────────────────────────────────────────────────
+
+    def _build_tile_grid_group(self):
+        ab = self._animation_backend
+
+        group = Adw.PreferencesGroup(
+            title="Tile Grid",
+            description="Screen grid dimensions for drag-to-tile placement.",
+        )
+
+        # Columns
+        cols_row = Adw.ActionRow(
+            title="Columns",
+            subtitle="Number of columns in the tiling grid.",
+        )
+        cols_spin = Gtk.SpinButton.new_with_range(1, 5, 1)
+        cols_spin.set_valign(Gtk.Align.CENTER)
+        cols_spin.set_value(ab._get_int("tile-cols", default=2))
+        cols_spin.connect("value-changed", self._on_grid_int_changed, "tile-cols")
+        cols_row.add_suffix(cols_spin)
+        group.add(cols_row)
+        self._grid_widgets["tile-cols"] = cols_spin
+
+        # Rows
+        rows_row = Adw.ActionRow(
+            title="Rows",
+            subtitle="Number of rows in the tiling grid.",
+        )
+        rows_spin = Gtk.SpinButton.new_with_range(1, 5, 1)
+        rows_spin.set_valign(Gtk.Align.CENTER)
+        rows_spin.set_value(ab._get_int("tile-rows", default=2))
+        rows_spin.connect("value-changed", self._on_grid_int_changed, "tile-rows")
+        rows_row.add_suffix(rows_spin)
+        group.add(rows_row)
+        self._grid_widgets["tile-rows"] = rows_spin
+
+        self.append(group)
+
+    def _on_grid_int_changed(self, spin: Gtk.SpinButton, key: str):
+        self._animation_backend._set_int(key, int(spin.get_value()))
+
+    # ── Drag preview ──────────────────────────────────────────────
+
+    def _build_tile_preview_group(self):
+        ab = self._animation_backend
+        enabled = ab._get_boolean("tile-preview-enabled", default=True)
+
+        group = Adw.PreferencesGroup(
+            title="Drag Preview &amp; Snapping",
+            description=(
+                "Show a tile preview overlay and snap windows to the grid "
+                "when dragging near screen edges."
+            ),
+        )
+
+        # Master switch
+        enable_row = Adw.ActionRow(
+            title="Enable drag preview",
+            subtitle="Preview and snap windows when dragging near edges.",
+        )
+        enable_switch = Gtk.Switch(valign=Gtk.Align.CENTER)
+        enable_switch.set_active(enabled)
+        enable_switch.connect("notify::active", self._on_preview_master_switch)
+        enable_row.add_suffix(enable_switch)
+        group.add(enable_row)
+        self._preview_widgets["_master"] = enable_switch
+
+        # Edge distance
+        dist_row = Adw.ActionRow(
+            title="Edge distance",
+            subtitle="Pixels from screen edge to trigger the preview.",
+        )
+        dist_spin = Gtk.SpinButton.new_with_range(0, 150, 5)
+        dist_spin.set_valign(Gtk.Align.CENTER)
+        dist_spin.set_value(ab._get_int("tile-preview-distance", default=25))
+        dist_spin.set_sensitive(enabled)
+        dist_spin.connect("value-changed", self._on_preview_int_changed,
+                          "tile-preview-distance")
+        dist_row.add_suffix(dist_spin)
+        group.add(dist_row)
+        self._preview_widgets["tile-preview-distance"] = dist_spin
+
+        # Delay
+        delay_row = Adw.ActionRow(
+            title="Preview delay",
+            subtitle="Milliseconds before the preview appears.",
+        )
+        delay_spin = Gtk.SpinButton.new_with_range(25, 1000, 25)
+        delay_spin.set_valign(Gtk.Align.CENTER)
+        delay_spin.set_value(ab._get_int("tile-preview-delay", default=500))
+        delay_spin.set_sensitive(enabled)
+        delay_spin.connect("value-changed", self._on_preview_int_changed,
+                          "tile-preview-delay")
+        delay_row.add_suffix(delay_spin)
+        group.add(delay_row)
+        self._preview_widgets["tile-preview-delay"] = delay_spin
+
+        self.append(group)
+
+    def _on_preview_master_switch(self, switch: Gtk.Switch, _pspec):
+        active = switch.get_active()
+        self._animation_backend._set_boolean("tile-preview-enabled", active)
+        for key, widget in self._preview_widgets.items():
+            if key == "_master":
+                continue
+            widget.set_sensitive(active)
+
+    def _on_preview_int_changed(self, spin: Gtk.SpinButton, key: str):
         self._animation_backend._set_int(key, int(spin.get_value()))
 
     def _on_install_runtime(self):

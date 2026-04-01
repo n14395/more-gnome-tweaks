@@ -1,9 +1,11 @@
+import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Meta from 'gi://Meta';
 import Shell from 'gi://Shell';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import Clutter from 'gi://Clutter';
+import St from 'gi://St';
 import {ControlsManager} from 'resource:///org/gnome/shell/ui/overviewControls.js';
 import {AppDisplay, AppFolderDialog} from 'resource:///org/gnome/shell/ui/appDisplay.js';
 import {WorkspaceAnimationController} from 'resource:///org/gnome/shell/ui/workspaceAnimation.js';
@@ -49,6 +51,7 @@ export class AnimationController {
         this._panelManager = new PanelLayoutManager(settings);
         this._topBarManager = new TopBarManager(settings);
         this._tileGapManager = new TileGapManager(settings);
+        this._tileGridManager = new TileGridManager(settings);
     }
 
     enable() {
@@ -69,6 +72,7 @@ export class AnimationController {
         this._panelManager.enable();
         this._topBarManager.enable();
         this._tileGapManager.enable();
+        this._tileGridManager.enable();
         logDebug(this._settings, 'animation controller enabled');
     }
 
@@ -105,6 +109,7 @@ export class AnimationController {
         if (Main.messageTray?._bannerBin)
             resetActor(Main.messageTray._bannerBin);
 
+        this._tileGridManager.disable();
         this._tileGapManager.disable();
         this._topBarManager.disable();
         this._panelManager.disable();
@@ -694,9 +699,10 @@ class TileGapManager {
         const isHalfTiled = (maximized === Meta.MaximizeFlags.HORIZONTAL
                           || maximized === Meta.MaximizeFlags.VERTICAL);
         if (!isHalfTiled) {
-            // If previously adjusted but no longer tiled, restore
-            if (this._adjusted.has(actor))
-                this._restoreOne(actor);
+            // Window no longer half-tiled — forget it.  Mutter handles the
+            // un-tile transition itself, and the grid manager may have
+            // repositioned the window intentionally.
+            this._adjusted.delete(actor);
             return;
         }
 
@@ -704,53 +710,59 @@ class TileGapManager {
         const outer = this._int('tile-gap-outer');
         if (inner <= 0 && outer <= 0) return;
 
-        const rect = meta.get_frame_rect();
         const workArea = meta.get_work_area_current_monitor();
 
-        // Save original rect before first adjustment
-        if (!this._adjusted.has(actor))
+        // Save original rect on first adjustment; always calculate from it
+        // so repeated calls are idempotent (size-changed re-fires after move)
+        if (!this._adjusted.has(actor)) {
+            const rect = meta.get_frame_rect();
             this._adjusted.set(actor, { x: rect.x, y: rect.y, width: rect.width, height: rect.height });
+        }
+        const orig = this._adjusted.get(actor);
+        let x = orig.x, y = orig.y, w = orig.width, h = orig.height;
 
-        let x = rect.x, y = rect.y, w = rect.width, h = rect.height;
-
-        if (maximized === Meta.MaximizeFlags.HORIZONTAL) {
-            // Half-tiled left or right (vertical strip)
-            const isLeft = (rect.x <= workArea.x);
-            const isRight = (rect.x + rect.width >= workArea.x + workArea.width - 2);
+        if (maximized === Meta.MaximizeFlags.VERTICAL) {
+            // VERTICAL = full height → left or right tile (vertical strip)
+            const isLeft = (orig.x <= workArea.x);
+            const isRight = (orig.x + orig.width >= workArea.x + workArea.width - 2);
 
             // Top/bottom outer gaps
-            y = rect.y + outer;
-            h = rect.height - outer * 2;
+            y = orig.y + outer;
+            h = orig.height - outer * 2;
 
             if (isLeft) {
                 // Left tile: outer gap on left, half inner gap on right
-                x = rect.x + outer;
-                w = rect.width - outer - Math.ceil(inner / 2);
+                x = orig.x + outer;
+                w = orig.width - outer - Math.ceil(inner / 2);
             } else if (isRight) {
                 // Right tile: half inner gap on left, outer gap on right
-                x = rect.x + Math.floor(inner / 2);
-                w = rect.width - Math.floor(inner / 2) - outer;
+                x = orig.x + Math.floor(inner / 2);
+                w = orig.width - Math.floor(inner / 2) - outer;
             }
-        } else if (maximized === Meta.MaximizeFlags.VERTICAL) {
-            // Half-tiled top or bottom (horizontal strip)
-            const isTop = (rect.y <= workArea.y);
-            const isBottom = (rect.y + rect.height >= workArea.y + workArea.height - 2);
+        } else if (maximized === Meta.MaximizeFlags.HORIZONTAL) {
+            // HORIZONTAL = full width → top or bottom tile (horizontal strip)
+            const isTop = (orig.y <= workArea.y);
+            const isBottom = (orig.y + orig.height >= workArea.y + workArea.height - 2);
 
             // Left/right outer gaps
-            x = rect.x + outer;
-            w = rect.width - outer * 2;
+            x = orig.x + outer;
+            w = orig.width - outer * 2;
 
             if (isTop) {
-                y = rect.y + outer;
-                h = rect.height - outer - Math.ceil(inner / 2);
+                y = orig.y + outer;
+                h = orig.height - outer - Math.ceil(inner / 2);
             } else if (isBottom) {
-                y = rect.y + Math.floor(inner / 2);
-                h = rect.height - Math.floor(inner / 2) - outer;
+                y = orig.y + Math.floor(inner / 2);
+                h = orig.height - Math.floor(inner / 2) - outer;
             }
         }
 
-        if (w > 0 && h > 0)
-            meta.move_resize_frame(true, x, y, w, h);
+        // Only call move_resize_frame if the position actually changed,
+        // to avoid an infinite size-changed signal loop
+        const cur = meta.get_frame_rect();
+        if (w > 0 && h > 0 &&
+            (x !== cur.x || y !== cur.y || w !== cur.width || h !== cur.height))
+            meta.move_resize_frame(false, x, y, w, h);
     }
 
     _restoreOne(actor) {
@@ -759,7 +771,7 @@ class TileGapManager {
         this._adjusted.delete(actor);
         const meta = actor?.meta_window;
         if (meta)
-            meta.move_resize_frame(true, orig.x, orig.y, orig.width, orig.height);
+            meta.move_resize_frame(false, orig.x, orig.y, orig.width, orig.height);
     }
 
     _restoreAll() {
@@ -771,11 +783,303 @@ class TileGapManager {
 }
 
 
+// ── Tile grid preview & snap ─────────────────────────────────────────
+
+class TileGridManager {
+    constructor(settings) {
+        this._settings = settings;
+        this._signalIds = [];
+        this._grabBeginId = null;
+        this._grabEndId = null;
+        this._preview = null;
+        this._delayTimerId = null;
+        this._pollTimerId = null;
+        this._previewLoc = null;   // { col, row, w, h } in grid units
+        this._dragWindow = null;
+        this._mutterSettings = null;
+        this._savedEdgeTiling = null;
+        this._tiledWindows = new WeakMap();  // window -> original frame rect
+    }
+
+    enable() {
+        for (const key of [
+            'tile-cols', 'tile-rows',
+            'tile-preview-enabled', 'tile-preview-distance', 'tile-preview-delay',
+            'tile-gaps-enabled', 'tile-gap-inner', 'tile-gap-outer',
+        ]) {
+            const id = this._settings.connect(`changed::${key}`, () => this._reconfigure());
+            this._signalIds.push(id);
+        }
+        this._reconfigure();
+    }
+
+    disable() {
+        this._disconnectGrab();
+        this._cancelDrag();
+        this._destroyPreview();
+        for (const id of this._signalIds)
+            this._settings.disconnect(id);
+        this._signalIds = [];
+    }
+
+    _bool(key) { try { return this._settings.get_boolean(key); } catch { return false; } }
+    _int(key)  { try { return this._settings.get_int(key); }     catch { return 0; } }
+
+    // ── Grab lifecycle ───────────────────────────────────────────
+
+    _reconfigure() {
+        if (this._bool('tile-preview-enabled'))
+            this._connectGrab();
+        else {
+            this._disconnectGrab();
+            this._cancelDrag();
+            this._hidePreview();
+        }
+    }
+
+    _connectGrab() {
+        if (this._grabBeginId) return;
+        // Disable GNOME's built-in edge-tiling so it doesn't compete
+        try {
+            this._mutterSettings = new Gio.Settings({ schema_id: 'org.gnome.mutter' });
+            this._savedEdgeTiling = this._mutterSettings.get_boolean('edge-tiling');
+            if (this._savedEdgeTiling)
+                this._mutterSettings.set_boolean('edge-tiling', false);
+        } catch {
+            this._mutterSettings = null;
+            this._savedEdgeTiling = null;
+        }
+        this._grabBeginId = global.display.connect('grab-op-begin',
+            (_d, win, op) => this._onGrabBegin(win, op));
+        this._grabEndId = global.display.connect('grab-op-end',
+            () => this._onGrabEnd());
+    }
+
+    _disconnectGrab() {
+        if (this._grabBeginId) {
+            global.display.disconnect(this._grabBeginId);
+            this._grabBeginId = null;
+        }
+        if (this._grabEndId) {
+            global.display.disconnect(this._grabEndId);
+            this._grabEndId = null;
+        }
+        // Restore GNOME's built-in edge-tiling
+        if (this._mutterSettings && this._savedEdgeTiling !== null) {
+            try { this._mutterSettings.set_boolean('edge-tiling', this._savedEdgeTiling); } catch {}
+            this._mutterSettings = null;
+            this._savedEdgeTiling = null;
+        }
+    }
+
+    _onGrabBegin(win, op) {
+        // Only handle window-move grabs (op 1), ignoring resize ops.
+        // Bit 1024 is set for keyboard-initiated moves.
+        if ((op & ~1024) !== 1 || !win) return;
+        this._dragWindow = win;
+
+        // Restore original window size when dragging a previously-tiled window
+        const saved = this._tiledWindows.get(win);
+        if (saved) {
+            this._tiledWindows.delete(win);
+            const [mx] = global.get_pointer();
+            // Centre the restored width on the cursor, clamped to work area
+            const workArea = win.get_work_area_current_monitor();
+            let x = mx - Math.round(saved.width / 2);
+            x = Math.max(workArea.x, Math.min(x, workArea.x + workArea.width - saved.width));
+            try {
+                const m = win.get_maximized?.() ?? 0;
+                if (m) win.unmaximize(m);
+                win.move_resize_frame(false, x, saved.y, saved.width, saved.height);
+            } catch { /* window may have been destroyed */ }
+        }
+
+        const delay = Math.max(25, this._int('tile-preview-delay'));
+        this._delayTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, delay, () => {
+            this._delayTimerId = null;
+            this._startPolling();
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _onGrabEnd() {
+        const loc = this._previewLoc;
+        const win = this._dragWindow;
+        this._cancelDrag();
+        this._hidePreview();
+        if (!loc || !win) return;
+
+        // Save the current frame rect so we can restore it on un-tile
+        try {
+            const cur = win.get_frame_rect();
+            this._tiledWindows.set(win, {
+                x: cur.x, y: cur.y, width: cur.width, height: cur.height,
+            });
+        } catch { /* ignore */ }
+
+        const workArea = win.get_work_area_current_monitor();
+        const rect = this._calcTileRect(loc, workArea);
+        // Defer so GNOME Shell finishes its own grab processing first
+        GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            try {
+                const m = win.get_maximized?.() ?? 0;
+                if (m) win.unmaximize(m);
+                win.move_resize_frame(false, rect.x, rect.y, rect.width, rect.height);
+            } catch { /* window may have been destroyed */ }
+            return GLib.SOURCE_REMOVE;
+        });
+    }
+
+    _cancelDrag() {
+        if (this._delayTimerId) {
+            GLib.source_remove(this._delayTimerId);
+            this._delayTimerId = null;
+        }
+        if (this._pollTimerId) {
+            GLib.source_remove(this._pollTimerId);
+            this._pollTimerId = null;
+        }
+        this._dragWindow = null;
+        this._previewLoc = null;
+    }
+
+    // ── Mouse polling ────────────────────────────────────────────
+
+    _startPolling() {
+        this._checkMouse();
+        this._pollTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 50, () => {
+            this._checkMouse();
+            return GLib.SOURCE_CONTINUE;
+        });
+    }
+
+    _checkMouse() {
+        if (!this._dragWindow) return;
+        const [mx, my] = global.get_pointer();
+        const workArea = this._dragWindow.get_work_area_current_monitor();
+        const dist = Math.max(1, this._int('tile-preview-distance'));
+        const cols = Math.max(1, this._int('tile-cols'));
+        const rows = Math.max(1, this._int('tile-rows'));
+
+        const nearL = mx - workArea.x < dist;
+        const nearR = workArea.x + workArea.width - mx < dist;
+        const nearT = my - workArea.y < dist;
+        const nearB = workArea.y + workArea.height - my < dist;
+
+        let loc = null;
+
+        // Corners (checked first since they overlap edge zones)
+        if (nearT && nearL)
+            loc = { col: 0, row: 0, w: 1, h: 1 };
+        else if (nearT && nearR)
+            loc = { col: cols - 1, row: 0, w: 1, h: 1 };
+        else if (nearB && nearL)
+            loc = { col: 0, row: rows - 1, w: 1, h: 1 };
+        else if (nearB && nearR)
+            loc = { col: cols - 1, row: rows - 1, w: 1, h: 1 };
+        // Single edges
+        else if (nearT)
+            loc = { col: 0, row: 0, w: cols, h: rows };   // top → maximise
+        else if (nearB)
+            loc = { col: 0, row: rows - 1, w: cols, h: 1 };   // bottom row
+        else if (nearL)
+            loc = { col: 0, row: 0, w: 1, h: rows };   // left column
+        else if (nearR)
+            loc = { col: cols - 1, row: 0, w: 1, h: rows };   // right column
+
+        if (loc && !this._locEq(loc, this._previewLoc)) {
+            this._previewLoc = loc;
+            this._showPreview(loc, workArea);
+        } else if (!loc && this._previewLoc) {
+            this._previewLoc = null;
+            this._hidePreview();
+        }
+    }
+
+    _locEq(a, b) {
+        return a && b && a.col === b.col && a.row === b.row
+            && a.w === b.w && a.h === b.h;
+    }
+
+    // ── Grid rect calculation ────────────────────────────────────
+
+    _calcTileRect(loc, workArea) {
+        const cols = Math.max(1, this._int('tile-cols'));
+        const rows = Math.max(1, this._int('tile-rows'));
+        const cellW = Math.floor(workArea.width / cols);
+        const cellH = Math.floor(workArea.height / rows);
+
+        let x = workArea.x + loc.col * cellW;
+        let y = workArea.y + loc.row * cellH;
+        let w = loc.w * cellW;
+        let h = loc.h * cellH;
+
+        // Absorb remainder pixels at right / bottom edges
+        if (loc.col + loc.w === cols)
+            w = workArea.width - loc.col * cellW;
+        if (loc.row + loc.h === rows)
+            h = workArea.height - loc.row * cellH;
+
+        // Apply gaps when enabled
+        if (this._bool('tile-gaps-enabled')) {
+            const inner = this._int('tile-gap-inner');
+            const outer = this._int('tile-gap-outer');
+            const hi = Math.floor(inner / 2);
+            const gl = loc.col === 0             ? outer : hi;
+            const gr = loc.col + loc.w === cols  ? outer : hi;
+            const gt = loc.row === 0             ? outer : hi;
+            const gb = loc.row + loc.h === rows  ? outer : hi;
+            x += gl;  y += gt;
+            w -= gl + gr;  h -= gt + gb;
+        }
+
+        return { x, y, width: Math.max(w, 1), height: Math.max(h, 1) };
+    }
+
+    // ── Preview overlay ──────────────────────────────────────────
+
+    _ensurePreview() {
+        if (this._preview) return;
+        this._preview = new St.Widget({
+            style_class: 'tile-preview',
+            visible: false,
+        });
+        Main.uiGroup.add_child(this._preview);
+    }
+
+    _showPreview(loc, workArea) {
+        this._ensurePreview();
+        const r = this._calcTileRect(loc, workArea);
+        this._preview.ease({
+            x: r.x, y: r.y, width: r.width, height: r.height,
+            opacity: 255, duration: 125,
+            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+        });
+        this._preview.show();
+    }
+
+    _hidePreview() {
+        if (!this._preview?.visible) return;
+        this._preview.ease({
+            opacity: 0, duration: 125,
+            mode: Clutter.AnimationMode.EASE_OUT_QUAD,
+            onComplete: () => { if (this._preview) this._preview.hide(); },
+        });
+    }
+
+    _destroyPreview() {
+        if (this._preview) {
+            this._preview.destroy();
+            this._preview = null;
+        }
+    }
+}
+
+
 class TopBarManager {
     constructor(settings) {
         this._settings = settings;
         this._signalIds = [];
-        this._origActivitiesText = null;
         this._origClockUpdate = null;
         this._clockTimerId = null;
         this._addedStyleClasses = [];
@@ -786,7 +1090,6 @@ class TopBarManager {
         for (const key of [
             'topbar-overrides-enabled',
             'activities-button-visible',
-            'activities-button-text',
             'clock-custom-format-enabled',
             'clock-custom-format',
             'panel-icon-spacing',
@@ -821,33 +1124,14 @@ class TopBarManager {
         const activities = Main.panel.statusArea?.activities;
         if (!activities) return;
 
-        // Save original text once
-        if (this._origActivitiesText === null)
-            this._origActivitiesText = activities.get_child_at_index?.(0)?.text
-                ?? activities.label?.text ?? 'Activities';
-
         const visible = this._bool('activities-button-visible');
         activities.container.visible = visible;
-
-        if (visible) {
-            const customText = this._str('activities-button-text');
-            const label = activities.get_child_at_index?.(0) ?? activities.label;
-            if (label && customText)
-                label.text = customText;
-            else if (label && !customText)
-                label.text = this._origActivitiesText;
-        }
     }
 
     _restoreActivities() {
         const activities = Main.panel.statusArea?.activities;
         if (!activities) return;
         activities.container.visible = true;
-        if (this._origActivitiesText !== null) {
-            const label = activities.get_child_at_index?.(0) ?? activities.label;
-            if (label) label.text = this._origActivitiesText;
-        }
-        this._origActivitiesText = null;
     }
 
     // ── Custom clock format ───────────────────────────────────────────
