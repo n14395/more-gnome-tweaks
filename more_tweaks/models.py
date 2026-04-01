@@ -26,6 +26,7 @@ class Tweak:
     max_value: float | None = None
     step: float | None = None
     command_hint: str | None = None
+    unavailable_hint: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

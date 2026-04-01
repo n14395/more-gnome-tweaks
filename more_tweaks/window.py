@@ -363,9 +363,9 @@ class SettingsBackend:
         """Return a short user-facing reason string, or *None* if available."""
         schema = self._get_schema(tweak.schema)
         if schema is None:
-            return "Not Installed"
+            return tweak.unavailable_hint or "Not Installed"
         if not schema.has_key(tweak.key):
-            return "Requires GNOME Update"
+            return tweak.unavailable_hint or "Requires GNOME Update"
         return None
 
     def _get_settings(self, schema: str) -> Gio.Settings | None:

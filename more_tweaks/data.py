@@ -342,6 +342,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("touchpad", "laptop", "gestures", "tap", "click", "tapping"),
         command_hint="gsettings set org.gnome.desktop.peripherals.touchpad tap-to-click true",
+        unavailable_hint="Requires Touchpad",
     ),
     Tweak(
         id="input-mouse-natural-scroll",
@@ -415,6 +416,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("touchpad", "scroll", "gestures", "swipe", "reverse", "direction", "inverted", "laptop"),
         command_hint="gsettings set org.gnome.desktop.peripherals.touchpad natural-scroll true",
+        unavailable_hint="Requires Touchpad",
     ),
     Tweak(
         id="input-touchpad-two-finger-scrolling",
@@ -428,6 +430,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("touchpad", "scroll", "laptop", "gestures", "two-finger", "multitouch"),
         command_hint="gsettings set org.gnome.desktop.peripherals.touchpad two-finger-scrolling-enabled true",
+        unavailable_hint="Requires Touchpad",
     ),
     Tweak(
         id="input-touchpad-edge-scrolling",
@@ -441,6 +444,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("touchpad", "scroll", "laptop", "gestures", "swipe", "side", "margin"),
         command_hint="gsettings set org.gnome.desktop.peripherals.touchpad edge-scrolling-enabled true",
+        unavailable_hint="Requires Touchpad",
     ),
     Tweak(
         id="input-touchpad-disable-while-typing",
@@ -459,6 +463,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("touchpad", "events", "laptop", "disable", "external-mouse", "send-events", "active"),
         command_hint="gsettings set org.gnome.desktop.peripherals.touchpad send-events 'disabled'",
+        unavailable_hint="Requires Touchpad",
     ),
     Tweak(
         id="input-touchpad-speed",
@@ -475,6 +480,7 @@ TWEAKS: tuple[Tweak, ...] = (
         step=0.05,
         tags=("touchpad", "pointer", "sensitivity", "cursor", "velocity", "laptop", "speed"),
         command_hint="gsettings set org.gnome.desktop.peripherals.touchpad speed 0.3",
+        unavailable_hint="Requires Touchpad",
     ),
     Tweak(
         id="input-touchpad-click-method",
@@ -493,6 +499,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("touchpad", "click", "gestures", "clickfinger", "button-areas", "laptop", "multitouch"),
         command_hint="gsettings set org.gnome.desktop.peripherals.touchpad click-method 'fingers'",
+        unavailable_hint="Requires Touchpad",
     ),
     Tweak(
         id="input-touchpad-left-handed",
@@ -511,6 +518,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("touchpad", "accessibility", "handedness", "swap", "buttons", "left-hand", "laptop"),
         command_hint="gsettings set org.gnome.desktop.peripherals.touchpad left-handed 'left'",
+        unavailable_hint="Requires Touchpad",
     ),
     Tweak(
         id="input-touchpad-palm-rejection",
@@ -524,6 +532,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("touchpad", "typing", "laptop", "palm", "disable", "accidental", "rejection"),
         command_hint="gsettings set org.gnome.desktop.peripherals.touchpad disable-while-typing true",
+        unavailable_hint="Requires Touchpad",
     ),
     Tweak(
         id="input-touchpad-middle-click-emulation",
@@ -537,6 +546,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("touchpad", "mouse", "middle-click", "paste", "emulation", "laptop"),
         command_hint="gsettings set org.gnome.desktop.peripherals.touchpad middle-click-emulation true",
+        unavailable_hint="Requires Touchpad",
     ),
     Tweak(
         id="input-touchpad-tap-and-drag",
@@ -550,6 +560,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("touchpad", "gestures", "drag", "swipe", "tap-and-drag", "move", "hold", "laptop"),
         command_hint="gsettings set org.gnome.desktop.peripherals.touchpad tap-and-drag true",
+        unavailable_hint="Requires Touchpad",
     ),
     Tweak(
         id="input-touchpad-tap-and-drag-lock",
@@ -563,6 +574,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("touchpad", "gestures", "drag", "swipe", "lock", "hold", "release", "laptop"),
         command_hint="gsettings set org.gnome.desktop.peripherals.touchpad tap-and-drag-lock true",
+        unavailable_hint="Requires Touchpad",
     ),
     Tweak(
         id="input-touchpad-accel-profile",
@@ -581,6 +593,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("touchpad", "acceleration", "pointer", "sensitivity", "flat", "adaptive", "laptop"),
         command_hint="gsettings set org.gnome.desktop.peripherals.touchpad accel-profile 'flat'",
+        unavailable_hint="Requires Touchpad",
     ),
     Tweak(
         id="input-touchpad-tap-button-map",
@@ -599,6 +612,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("touchpad", "gestures", "buttons", "multi-finger", "right-click", "middle-click", "laptop"),
         command_hint="gsettings set org.gnome.desktop.peripherals.touchpad tap-button-map 'lrm'",
+        unavailable_hint="Requires Touchpad",
     ),
     # ── Gesture-related keybindings (touchpad category) ──────────────
     Tweak(
@@ -1505,6 +1519,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("wayland", "xwayland", "keyboard", "security", "grabs", "x11", "remote"),
         command_hint="gsettings set org.gnome.mutter.wayland xwayland-allow-grabs true",
+        unavailable_hint="Wayland Only",
     ),
     Tweak(
         id="display-xwayland-byte-swapped-clients",
@@ -1518,6 +1533,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("wayland", "xwayland", "security", "endian", "byte-swap", "niche"),
         command_hint="gsettings set org.gnome.mutter.wayland xwayland-allow-byte-swapped-clients true",
+        unavailable_hint="Wayland Only",
     ),
     Tweak(
         id="display-scaling-factor",
@@ -1864,6 +1880,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("search", "tracker", "indexing", "filesystem", "live", "realtime", "watch"),
         command_hint="gsettings set org.freedesktop.Tracker3.Miner.Files enable-monitors false",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-default-folder-view",
@@ -2998,6 +3015,7 @@ TWEAKS: tuple[Tweak, ...] = (
         step=60,
         tags=("power", "timeout", "battery", "idle", "sleep", "unplugged"),
         command_hint="gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-timeout 900",
+        unavailable_hint="Laptop Only",
     ),
     Tweak(
         id="power-idle-dim",
@@ -3055,6 +3073,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("power", "idle", "battery", "suspend", "blank", "action", "unplugged"),
         command_hint="gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type 'suspend'",
+        unavailable_hint="Laptop Only",
     ),
     Tweak(
         id="power-power-button-action",
@@ -3093,6 +3112,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("power", "lid", "laptop", "close", "suspend", "dock", "action", "ac"),
         command_hint="gsettings set org.gnome.settings-daemon.plugins.power lid-close-ac-action 'nothing'",
+        unavailable_hint="Laptop Only",
     ),
     Tweak(
         id="power-lid-close-battery-action",
@@ -3112,6 +3132,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("power", "lid", "battery", "close", "suspend", "laptop", "action"),
         command_hint="gsettings set org.gnome.settings-daemon.plugins.power lid-close-battery-action 'suspend'",
+        unavailable_hint="Laptop Only",
     ),
     # ── 50 new tweaks ─────────────────────────────────────────────────
     # privacy
@@ -3141,6 +3162,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("power", "display", "brightness", "ambient", "light-sensor", "adaptive", "automatic"),
         command_hint="gsettings set org.gnome.settings-daemon.plugins.power ambient-enabled true",
+        unavailable_hint="Laptop Only",
     ),
     Tweak(
         id="power-critical-battery-action",
@@ -3159,6 +3181,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("power", "battery", "safety", "critical", "low", "shutdown", "emergency"),
         command_hint="gsettings set org.gnome.settings-daemon.plugins.power critical-battery-action 'power-off'",
+        unavailable_hint="Laptop Only",
     ),
     # accessibility
     Tweak(
@@ -3299,6 +3322,7 @@ TWEAKS: tuple[Tweak, ...] = (
         step=1048576,
         tags=("search", "tracker", "indexing"),
         command_hint="gsettings set org.freedesktop.Tracker3.Extract max-bytes 1048576",
+        unavailable_hint="App Not Installed",
     ),
     # desktop
     Tweak(
@@ -3442,6 +3466,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("sharing", "remote-desktop", "rdp"),
         command_hint="gsettings set org.gnome.desktop.remote-desktop.rdp enable true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="sharing-rdp-view-only",
@@ -3455,6 +3480,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("sharing", "remote-desktop", "rdp"),
         command_hint="gsettings set org.gnome.desktop.remote-desktop.rdp view-only true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="sharing-rdp-screen-share-mode",
@@ -3472,6 +3498,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("sharing", "remote-desktop", "rdp"),
         command_hint="gsettings set org.gnome.desktop.remote-desktop.rdp screen-share-mode 'mirror-primary'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="sharing-vnc-enable",
@@ -3485,6 +3512,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("sharing", "remote-desktop", "vnc"),
         command_hint="gsettings set org.gnome.desktop.remote-desktop.vnc enable true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="sharing-vnc-view-only",
@@ -3498,6 +3526,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("sharing", "remote-desktop", "vnc"),
         command_hint="gsettings set org.gnome.desktop.remote-desktop.vnc view-only true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="sharing-vnc-auth-method",
@@ -3515,6 +3544,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("sharing", "remote-desktop", "vnc"),
         command_hint="gsettings set org.gnome.desktop.remote-desktop.vnc auth-method 'prompt'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="sharing-disable-encryption",
@@ -3528,6 +3558,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("sharing", "remote-desktop", "security"),
         command_hint="gsettings set org.gnome.desktop.remote-desktop disable-encryption true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="sharing-file-sharing",
@@ -3825,6 +3856,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("screenshot", "pointer", "capture"),
         command_hint="gsettings set org.gnome.gnome-screenshot include-pointer true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-screenshot-include-border",
@@ -3838,6 +3870,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("screenshot", "border", "capture"),
         command_hint="gsettings set org.gnome.gnome-screenshot include-border true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-screenshot-delay",
@@ -3854,6 +3887,7 @@ TWEAKS: tuple[Tweak, ...] = (
         step=1,
         tags=("screenshot", "delay", "timing"),
         command_hint="gsettings set org.gnome.gnome-screenshot delay 3",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-screenshot-save-directory",
@@ -3867,6 +3901,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="folder",
         tags=("screenshot", "directory", "storage"),
         command_hint="gsettings set org.gnome.gnome-screenshot auto-save-directory '/home/user/Screenshots'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-epiphany-homepage",
@@ -3880,6 +3915,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="text",
         tags=("web", "browser", "homepage"),
         command_hint="gsettings set org.gnome.Epiphany homepage-url 'https://example.com'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-epiphany-restore-session",
@@ -3897,6 +3933,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("web", "browser", "session"),
         command_hint="gsettings set org.gnome.Epiphany restore-session-policy 'always'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-epiphany-ask-default",
@@ -3910,6 +3947,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("web", "browser", "default"),
         command_hint="gsettings set org.gnome.Epiphany ask-for-default false",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-epiphany-caret-browsing",
@@ -3923,6 +3961,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("web", "browser", "accessibility", "keyboard"),
         command_hint="gsettings set org.gnome.Epiphany enable-caret-browsing true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-epiphany-new-windows-in-tabs",
@@ -3936,6 +3975,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("web", "browser", "tabs"),
         command_hint="gsettings set org.gnome.Epiphany new-windows-in-tabs true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-epiphany-incognito-mode",
@@ -3949,6 +3989,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("web", "browser", "privacy", "incognito"),
         command_hint="gsettings set org.gnome.Epiphany start-in-incognito-mode true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-epiphany-search-suggestions",
@@ -3962,6 +4003,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("web", "browser", "search", "privacy"),
         command_hint="gsettings set org.gnome.Epiphany use-search-suggestions true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-epiphany-reader-color-scheme",
@@ -3976,6 +4018,7 @@ TWEAKS: tuple[Tweak, ...] = (
         choices=(Choice("light", "Light"), Choice("dark", "Dark")),
         tags=("web", "browser", "reader", "theme"),
         command_hint="gsettings set org.gnome.Epiphany.reader color-scheme 'dark'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-epiphany-reader-font-style",
@@ -3990,6 +4033,7 @@ TWEAKS: tuple[Tweak, ...] = (
         choices=(Choice("sans", "Sans-serif"), Choice("serif", "Serif")),
         tags=("web", "browser", "reader", "fonts"),
         command_hint="gsettings set org.gnome.Epiphany.reader font-style 'serif'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-epiphany-tabs-bar-policy",
@@ -4008,6 +4052,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("web", "browser", "tabs", "ui"),
         command_hint="gsettings set org.gnome.Epiphany.ui tabs-bar-visibility-policy 'more-than-one'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-epiphany-bottom-url-bar",
@@ -4021,6 +4066,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("web", "browser", "ui", "mobile"),
         command_hint="gsettings set org.gnome.Epiphany.ui bottom-url-bar true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-clocks-geolocation",
@@ -4048,6 +4094,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("terminal", "gnome-terminal", "menu"),
         command_hint="gsettings set org.gnome.Terminal.Legacy.Settings default-show-menubar true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-terminal-theme-variant",
@@ -4066,6 +4113,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("terminal", "gnome-terminal", "theme"),
         command_hint="gsettings set org.gnome.Terminal.Legacy.Settings theme-variant 'dark'",
+        unavailable_hint="App Not Installed",
     ),
     # themes: GTK input method settings
     Tweak(
@@ -4334,6 +4382,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("web", "browser", "passwords"),
         command_hint="dconf write /org/gnome/epiphany/web/remember-passwords true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-epiphany-adblock",
@@ -4347,6 +4396,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("web", "browser", "adblock"),
         command_hint="dconf write /org/gnome/epiphany/web/enable-adblock true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-epiphany-default-zoom",
@@ -4363,6 +4413,7 @@ TWEAKS: tuple[Tweak, ...] = (
         step=0.1,
         tags=("web", "browser", "zoom"),
         command_hint="dconf write /org/gnome/epiphany/web/default-zoom-level 1.0",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-epiphany-site-quirks",
@@ -4376,6 +4427,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("web", "browser", "compatibility"),
         command_hint="dconf write /org/gnome/epiphany/web/enable-site-specific-quirks true",
+        unavailable_hint="App Not Installed",
     ),
     # input: XKB options (string array)
     Tweak(
@@ -4403,6 +4455,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("bluetooth", "blueman", "icons"),
         command_hint="gsettings set org.blueman.general symbolic-status-icons true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="input-blueman-hide-unnamed",
@@ -4416,6 +4469,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("bluetooth", "blueman", "devices"),
         command_hint="gsettings set org.blueman.general hide-unnamed true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="input-blueman-nap-enable",
@@ -4429,6 +4483,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("bluetooth", "blueman", "network", "tethering"),
         command_hint="gsettings set org.blueman.network nap-enable true",
+        unavailable_hint="App Not Installed",
     ),
     # extensions: enabled extensions list
     Tweak(
@@ -4499,6 +4554,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="text-list",
         tags=("search", "tracker", "directories"),
         command_hint="gsettings set org.freedesktop.Tracker3.Miner.Files index-recursive-directories \"['&DESKTOP', '&DOCUMENTS']\"",
+        unavailable_hint="App Not Installed",
     ),
     # search: Tracker ignored directories
     Tweak(
@@ -4513,6 +4569,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="text-list",
         tags=("search", "tracker", "exclude"),
         command_hint="gsettings set org.freedesktop.Tracker3.Miner.Files ignored-directories \"['po', 'CVS', '.git']\"",
+        unavailable_hint="App Not Installed",
     ),
     # search: Tracker ignored files
     Tweak(
@@ -4527,6 +4584,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="text-list",
         tags=("search", "tracker", "exclude"),
         command_hint="gsettings set org.freedesktop.Tracker3.Miner.Files ignored-files \"['*.o', '*.la']\"",
+        unavailable_hint="App Not Installed",
     ),
     # files: list view columns
     Tweak(
@@ -4711,6 +4769,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("terminal", "gnome-terminal", "font"),
         command_hint="gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/ use-system-font false",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-terminal-profile-font",
@@ -4724,6 +4783,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="font",
         tags=("terminal", "gnome-terminal", "font"),
         command_hint="gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/ font 'Monospace 12'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-terminal-profile-use-theme-colors",
@@ -4737,6 +4797,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("terminal", "gnome-terminal", "theme"),
         command_hint="gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/ use-theme-colors false",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-terminal-profile-foreground-color",
@@ -4750,6 +4811,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="color",
         tags=("terminal", "gnome-terminal", "colors"),
         command_hint="gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/ foreground-color '#D3D7CF'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-terminal-profile-background-color",
@@ -4763,6 +4825,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="color",
         tags=("terminal", "gnome-terminal", "colors"),
         command_hint="gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/ background-color '#2E3436'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-terminal-profile-cursor-shape",
@@ -4781,6 +4844,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("terminal", "gnome-terminal", "cursor"),
         command_hint="gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/ cursor-shape 'block'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-terminal-profile-cursor-blink-mode",
@@ -4799,6 +4863,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("terminal", "gnome-terminal", "cursor"),
         command_hint="gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/ cursor-blink-mode 'system'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-terminal-profile-scrollback-unlimited",
@@ -4812,6 +4877,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("terminal", "gnome-terminal", "scrollback"),
         command_hint="gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/ scrollback-unlimited true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-terminal-profile-scrollback-lines",
@@ -4828,6 +4894,7 @@ TWEAKS: tuple[Tweak, ...] = (
         step=256,
         tags=("terminal", "gnome-terminal", "scrollback"),
         command_hint="gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/ scrollback-lines 10000",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-terminal-profile-audible-bell",
@@ -4841,6 +4908,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("terminal", "gnome-terminal", "bell"),
         command_hint="gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/ audible-bell false",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-terminal-profile-bold-is-bright",
@@ -4854,6 +4922,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("terminal", "gnome-terminal", "colors"),
         command_hint="gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/ bold-is-bright true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-terminal-profile-visible-name",
@@ -4867,6 +4936,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="text",
         tags=("terminal", "gnome-terminal", "profile"),
         command_hint="gsettings set org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9/ visible-name 'Default'",
+        unavailable_hint="App Not Installed",
     ),
 )
 
