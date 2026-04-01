@@ -277,6 +277,33 @@ def _unit_for_key(key: str) -> str:
     return ""
 
 
+def _list_installed_themes(key: str) -> list[str]:
+    """Scan standard directories for installed theme names."""
+    dirs: list[Path] = []
+    home = Path.home()
+    if key == "gtk-theme":
+        dirs = [Path("/usr/share/themes"), home / ".themes", home / ".local/share/themes"]
+        # A valid GTK theme dir has a gtk-*/gtk.css inside
+        check = lambda p: any(p.glob("gtk-*/gtk.css")) or any(p.glob("gtk-*/gtk-*.css"))
+    elif key == "icon-theme":
+        dirs = [Path("/usr/share/icons"), home / ".icons", home / ".local/share/icons"]
+        check = lambda p: (p / "index.theme").is_file()
+    elif key == "cursor-theme":
+        dirs = [Path("/usr/share/icons"), home / ".icons", home / ".local/share/icons"]
+        check = lambda p: (p / "cursors").is_dir()
+    else:
+        return []
+
+    names: set[str] = set()
+    for d in dirs:
+        if not d.is_dir():
+            continue
+        for child in d.iterdir():
+            if child.is_dir() and check(child):
+                names.add(child.name)
+    return sorted(names, key=str.casefold)
+
+
 class SettingsBackend:
     def __init__(self):
         self._settings: dict[str, Gio.Settings] = {}
@@ -372,6 +399,8 @@ class SettingsBackend:
         if tweak.control == "text-list":
             return ", ".join(value) if isinstance(value, list) else str(value)
         if tweak.value_type == "tuple-ii" and isinstance(value, tuple):
+            if tweak.control == "dimensions":
+                return value  # return raw tuple for dual spinners
             return f"{value[0]}, {value[1]}"
         return value
 
@@ -567,6 +596,96 @@ class TweakRow(Adw.ActionRow):
             self.recorder.connect("shortcut-set", self._on_shortcut_set)
             return self.recorder
 
+        if self.tweak.control == "font":
+            dialog = Gtk.FontDialog()
+            dialog.set_title(f"Choose {self.tweak.name}")
+            self.font_button = Gtk.FontDialogButton(dialog=dialog)
+            self.font_button.set_valign(Gtk.Align.CENTER)
+            self.font_button.set_use_font(True)
+            self.font_button.connect("notify::font-desc", self._on_font_changed)
+            return self.font_button
+
+        if self.tweak.control == "dimensions":
+            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+            box.set_valign(Gtk.Align.CENTER)
+            self._width_spin = Gtk.SpinButton.new_with_range(200, 7680, 10)
+            self._width_spin.set_width_chars(5)
+            self._width_spin.set_numeric(True)
+            self._width_spin.connect("value-changed", self._on_dimensions_changed)
+            box.append(self._width_spin)
+            box.append(Gtk.Label(label="\u00d7"))  # × symbol
+            self._height_spin = Gtk.SpinButton.new_with_range(200, 4320, 10)
+            self._height_spin.set_width_chars(5)
+            self._height_spin.set_numeric(True)
+            self._height_spin.connect("value-changed", self._on_dimensions_changed)
+            box.append(self._height_spin)
+            px_label = Gtk.Label(label="px")
+            px_label.add_css_class("dim-label")
+            px_label.add_css_class("caption")
+            box.append(px_label)
+            return box
+
+        if self.tweak.control == "time-of-day":
+            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            box.set_valign(Gtk.Align.CENTER)
+            self._hour_spin = Gtk.SpinButton.new_with_range(0, 23, 1)
+            self._hour_spin.set_width_chars(2)
+            self._hour_spin.set_numeric(True)
+            self._hour_spin.connect("value-changed", self._on_time_changed)
+            box.append(self._hour_spin)
+            box.append(Gtk.Label(label=":"))
+            self._min_spin = Gtk.SpinButton.new_with_range(0, 45, 15)
+            self._min_spin.set_width_chars(2)
+            self._min_spin.set_numeric(True)
+            self._min_spin.connect("value-changed", self._on_time_changed)
+            box.append(self._min_spin)
+            return box
+
+        if self.tweak.control == "theme":
+            self._theme_names = _list_installed_themes(self.tweak.key)
+            labels = self._theme_names if self._theme_names else ["(none found)"]
+            self.dropdown = Gtk.DropDown.new_from_strings(labels)
+            self.dropdown.set_valign(Gtk.Align.CENTER)
+            self.dropdown.connect("notify::selected", self._on_theme_changed)
+            return self.dropdown
+
+        if self.tweak.control == "color":
+            dialog = Gtk.ColorDialog()
+            dialog.set_title(f"Choose {self.tweak.name}")
+            dialog.set_with_alpha(False)
+            self.color_button = Gtk.ColorDialogButton(dialog=dialog)
+            self.color_button.set_valign(Gtk.Align.CENTER)
+            self.color_button.connect("notify::rgba", self._on_color_changed)
+            return self.color_button
+
+        if self.tweak.control == "file":
+            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            box.set_valign(Gtk.Align.CENTER)
+            self._file_label = Gtk.Label(label="None")
+            self._file_label.set_ellipsize(Pango.EllipsizeMode.START)
+            self._file_label.set_max_width_chars(24)
+            self._file_label.add_css_class("dim-label")
+            box.append(self._file_label)
+            file_btn = Gtk.Button(icon_name="document-open-symbolic")
+            file_btn.set_tooltip_text("Choose file")
+            file_btn.connect("clicked", self._on_file_choose_clicked)
+            box.append(file_btn)
+            return box
+
+        if self.tweak.control == "folder":
+            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+            box.set_valign(Gtk.Align.CENTER)
+            self._folder_label = Gtk.Label(label="None")
+            self._folder_label.set_ellipsize(Pango.EllipsizeMode.START)
+            self._folder_label.set_max_width_chars(24)
+            self._folder_label.add_css_class("dim-label")
+            box.append(self._folder_label)
+            folder_btn = Gtk.Button(icon_name="folder-open-symbolic")
+            folder_btn.set_tooltip_text("Choose folder")
+            folder_btn.connect("clicked", self._on_folder_choose_clicked)
+            box.append(folder_btn)
+            return box
+
         if self.tweak.control in {"text", "text-list"}:
             self.entry = Gtk.Entry()
             self.entry.set_width_chars(18)
@@ -616,6 +735,44 @@ class TweakRow(Adw.ActionRow):
                         selected = index
                         break
                 self.dropdown.set_selected(selected)
+            elif self.tweak.control == "dimensions":
+                if isinstance(value, tuple) and len(value) == 2:
+                    self._width_spin.set_value(value[0])
+                    self._height_spin.set_value(value[1])
+                elif isinstance(value, str) and "," in value:
+                    parts = value.split(",")
+                    self._width_spin.set_value(int(parts[0].strip()))
+                    self._height_spin.set_value(int(parts[1].strip()))
+            elif self.tweak.control == "time-of-day":
+                hours = float(value or 0)
+                h = int(hours)
+                m = int(round((hours - h) * 60))
+                self._hour_spin.set_value(h)
+                self._min_spin.set_value(m)
+            elif self.tweak.control == "theme":
+                try:
+                    idx = self._theme_names.index(str(value))
+                except ValueError:
+                    idx = 0
+                self.dropdown.set_selected(idx)
+            elif self.tweak.control == "font":
+                desc = Pango.FontDescription.from_string(str(value) if value else "")
+                self.font_button.set_font_desc(desc)
+            elif self.tweak.control == "color":
+                rgba = Gdk.RGBA()
+                rgba.parse(str(value) if value else "#000000")
+                self.color_button.set_rgba(rgba)
+            elif self.tweak.control == "file":
+                text = str(value) if value else ""
+                if text.startswith("file://"):
+                    self._file_label.set_text(Path(text[7:]).name or text)
+                    self._file_label.set_tooltip_text(text)
+                else:
+                    self._file_label.set_text(text or "None")
+            elif self.tweak.control == "folder":
+                text = str(value) if value else ""
+                self._folder_label.set_text(Path(text).name if text else "Default")
+                self._folder_label.set_tooltip_text(text or "")
             elif self.tweak.control == "keybinding":
                 self.recorder.set_accel(str(value) if value else "")
             elif self.tweak.control in {"text", "text-list"}:
@@ -632,6 +789,125 @@ class TweakRow(Adw.ActionRow):
         if self.tweak.command_hint is not None:
             clipboard = Gdk.Display.get_default().get_clipboard()
             clipboard.set(self.tweak.command_hint)
+
+    def _on_font_changed(self, button: Gtk.FontDialogButton, _pspec):
+        if self._updating:
+            return
+        desc = button.get_font_desc()
+        if desc is None:
+            return
+        value = desc.to_string()
+        if not self.backend.write(self.tweak, value):
+            self.refresh()
+            return
+        self.refresh()
+
+    def _on_dimensions_changed(self, _spin: Gtk.SpinButton):
+        if self._updating:
+            return
+        w = int(self._width_spin.get_value())
+        h = int(self._height_spin.get_value())
+        # Write as the tuple-ii string format the backend expects
+        if not self.backend.write(self.tweak, f"{w}, {h}"):
+            self.refresh()
+            return
+        self.refresh()
+
+    def _on_time_changed(self, _spin: Gtk.SpinButton):
+        if self._updating:
+            return
+        h = int(self._hour_spin.get_value())
+        m = int(self._min_spin.get_value())
+        value = h + m / 60.0
+        if not self.backend.write(self.tweak, value):
+            self.refresh()
+            return
+        self.refresh()
+
+    def _on_theme_changed(self, dropdown: Gtk.DropDown, _pspec):
+        if self._updating:
+            return
+        idx = dropdown.get_selected()
+        if idx >= len(self._theme_names):
+            return
+        value = self._theme_names[idx]
+        if not self.backend.write(self.tweak, value):
+            self.refresh()
+            return
+        self.refresh()
+
+    def _on_color_changed(self, button: Gtk.ColorDialogButton, _pspec):
+        if self._updating:
+            return
+        rgba = button.get_rgba()
+        value = rgba.to_string()
+        # GSettings stores colors as #RRGGBB hex; Gdk.RGBA.to_string() gives
+        # "rgb(r,g,b)" in GTK 4, so convert to hex.
+        r = int(round(rgba.red * 255))
+        g = int(round(rgba.green * 255))
+        b = int(round(rgba.blue * 255))
+        value = f"#{r:02x}{g:02x}{b:02x}"
+        if not self.backend.write(self.tweak, value):
+            self.refresh()
+            return
+        self.refresh()
+
+    def _on_file_choose_clicked(self, _button: Gtk.Button):
+        dialog = Gtk.FileDialog()
+        dialog.set_title(f"Choose {self.tweak.name}")
+        img_filter = Gtk.FileFilter()
+        img_filter.set_name("Images")
+        img_filter.add_mime_type("image/*")
+        filters = Gio.ListStore.new(Gtk.FileFilter)
+        filters.append(img_filter)
+        all_filter = Gtk.FileFilter()
+        all_filter.set_name("All files")
+        all_filter.add_pattern("*")
+        filters.append(all_filter)
+        dialog.set_filters(filters)
+        # Pre-select current file if possible
+        current = self.backend.read(self.tweak)
+        if current and str(current).startswith("file://"):
+            try:
+                dialog.set_initial_file(Gio.File.new_for_uri(str(current)))
+            except Exception:
+                pass
+        dialog.open(self.get_root(), None, self._on_file_chosen)
+
+    def _on_file_chosen(self, dialog: Gtk.FileDialog, result):
+        try:
+            gfile = dialog.open_finish(result)
+        except GLib.Error:
+            return
+        uri = gfile.get_uri()
+        if not self.backend.write(self.tweak, uri):
+            self.refresh()
+            return
+        self.refresh()
+
+    def _on_folder_choose_clicked(self, _button: Gtk.Button):
+        dialog = Gtk.FileDialog()
+        dialog.set_title(f"Choose {self.tweak.name}")
+        current = self.backend.read(self.tweak)
+        if current:
+            try:
+                dialog.set_initial_folder(Gio.File.new_for_path(str(current)))
+            except Exception:
+                pass
+        dialog.select_folder(self.get_root(), None, self._on_folder_chosen)
+
+    def _on_folder_chosen(self, dialog: Gtk.FileDialog, result):
+        try:
+            gfile = dialog.select_folder_finish(result)
+        except GLib.Error:
+            return
+        path = gfile.get_path()
+        if path is None:
+            return
+        if not self.backend.write(self.tweak, path):
+            self.refresh()
+            return
+        self.refresh()
 
     def _on_switch_changed(self, switch: Gtk.Switch, _pspec):
         if self._updating:
