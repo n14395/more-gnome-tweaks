@@ -332,6 +332,12 @@
       <description>Horizontal padding in pixels applied to each top bar indicator. -1 means use the default theme spacing.</description>
     </key>
 
+    <key name="panel-icon-color" type="s">
+      <default>''</default>
+      <summary>Panel icon color override</summary>
+      <description>Hex color for top bar icons (#rrggbb). Empty string uses default theme color.</description>
+    </key>
+
     <key name="panel-layout" type="s">
       <default>''</default>
       <summary>Top bar panel layout</summary>

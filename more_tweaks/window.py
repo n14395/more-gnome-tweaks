@@ -1888,6 +1888,44 @@ class TopBarSection(_ScrollPreservingSection):
         self._topbar_widgets["panel-icon-spacing"] = spacing_spin
 
         self.append(spacing_group)
+
+        # Panel icon color group
+        color_group = Adw.PreferencesGroup(title="Panel Icon Color")
+
+        color_row = Adw.ActionRow(
+            title="Icon color",
+            subtitle="Override the color of all top bar icons and text.",
+        )
+        color_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        color_box.set_valign(Gtk.Align.CENTER)
+
+        color_dialog = Gtk.ColorDialog()
+        color_dialog.set_title("Panel Icon Color")
+        color_dialog.set_with_alpha(False)
+        self._topbar_color_button = Gtk.ColorDialogButton(dialog=color_dialog)
+        current_color = ab._get_string("panel-icon-color", default="")
+        if current_color:
+            rgba = Gdk.RGBA()
+            rgba.parse(current_color)
+            self._topbar_color_button.set_rgba(rgba)
+        self._topbar_color_button.set_sensitive(enabled)
+        self._topbar_color_button.connect("notify::rgba",
+                                          self._on_topbar_color_changed)
+        color_box.append(self._topbar_color_button)
+
+        reset_color_btn = Gtk.Button(icon_name="edit-undo-symbolic")
+        reset_color_btn.add_css_class("flat")
+        reset_color_btn.set_tooltip_text("Reset to default theme color")
+        reset_color_btn.set_sensitive(enabled)
+        reset_color_btn.connect("clicked", self._on_topbar_color_reset)
+        color_box.append(reset_color_btn)
+
+        color_row.add_suffix(color_box)
+        color_group.add(color_row)
+        self._topbar_widgets["panel-icon-color"] = self._topbar_color_button
+        self._topbar_widgets["panel-icon-color-reset"] = reset_color_btn
+
+        self.append(color_group)
         self._updating_topbar = False
 
     def _on_topbar_master_switch(self, switch: Gtk.Switch, _pspec):
@@ -1912,6 +1950,22 @@ class TopBarSection(_ScrollPreservingSection):
         if self._updating_topbar:
             return
         self._animation_backend._set_int(key, int(spin.get_value()))
+
+    def _on_topbar_color_changed(self, button: Gtk.ColorDialogButton, _pspec):
+        if self._updating_topbar:
+            return
+        rgba = button.get_rgba()
+        r = int(round(rgba.red * 255))
+        g = int(round(rgba.green * 255))
+        b = int(round(rgba.blue * 255))
+        self._animation_backend._set_string("panel-icon-color", f"#{r:02x}{g:02x}{b:02x}")
+
+    def _on_topbar_color_reset(self, _button: Gtk.Button):
+        self._animation_backend._set_string("panel-icon-color", "")
+        # Reset the color button to white as a visual indicator
+        rgba = Gdk.RGBA()
+        rgba.parse("#ffffff")
+        self._topbar_color_button.set_rgba(rgba)
 
     def _on_install_runtime(self):
         if not self._animation_backend.install_runtime():

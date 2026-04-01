@@ -1,3 +1,4 @@
+import Cogl from 'gi://Cogl';
 import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Meta from 'gi://Meta';
@@ -1155,7 +1156,7 @@ class TopBarManager {
         this._signalIds = [];
         this._origClockUpdate = null;
         this._clockTimerId = null;
-        this._addedStyleClasses = [];
+        this._styledChildren = [];
     }
 
     enable() {
@@ -1166,6 +1167,7 @@ class TopBarManager {
             'clock-custom-format-enabled',
             'clock-custom-format',
             'panel-icon-spacing',
+            'panel-icon-color',
         ]) {
             const id = this._settings.connect(`changed::${key}`, () => this._apply());
             this._signalIds.push(id);
@@ -1178,7 +1180,7 @@ class TopBarManager {
         this._signalIds = [];
         this._restoreActivities();
         this._restoreClock();
-        this._restoreSpacing();
+        this._restorePanelStyles();
     }
 
     _str(key) {
@@ -1275,33 +1277,85 @@ class TopBarManager {
 
     // ── Panel icon spacing ────────────────────────────────────────────
 
-    _applySpacing() {
+    // ── Combined panel styles (spacing + icon color) ────────────────
+
+    _applyPanelStyles() {
+        this._restorePanelStyles();
+
         const spacing = this._int('panel-icon-spacing');
-        const className = 'more-tweaks-panel-spacing';
+        const color = this._str('panel-icon-color');
+        if (spacing < 0 && !color) return;
 
-        // Remove old overrides first
-        this._restoreSpacing();
+        const spacingCss = spacing >= 0
+            ? `padding-left: ${spacing}px; padding-right: ${spacing}px;`
+            : null;
+        const colorCss = color
+            ? `color: ${color} !important;`
+            : null;
 
-        if (spacing < 0) return;
+        // Parse hex color into a Cogl.Color for the ColorizeEffect
+        let tintColor = null;
+        if (color) {
+            const hex = color.replace('#', '');
+            const r = parseInt(hex.substring(0, 2), 16) / 255;
+            const g = parseInt(hex.substring(2, 4), 16) / 255;
+            const b = parseInt(hex.substring(4, 6), 16) / 255;
+            if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+                tintColor = new Cogl.Color();
+                tintColor.init_from_4f(r, g, b, 1.0);
+            }
+        }
 
-        // Apply padding to each indicator container in the panel
         for (const box of [Main.panel._leftBox, Main.panel._centerBox, Main.panel._rightBox]) {
             for (const child of box.get_children()) {
-                child.set_style(`padding-left: ${spacing}px; padding-right: ${spacing}px;`);
-                child.add_style_class_name(className);
-                this._addedStyleClasses.push(child);
+                if (spacingCss) {
+                    child.set_style(spacingCss);
+                    child.add_style_class_name('more-tweaks-panel-style');
+                    this._styledChildren.push(child);
+                }
+                if (colorCss)
+                    this._colorDescendants(child, colorCss, tintColor);
             }
         }
     }
 
-    _restoreSpacing() {
-        for (const child of this._addedStyleClasses) {
+    _colorDescendants(actor, css, tintColor) {
+        if (actor instanceof St.Icon) {
+            // Symbolic icons respond to CSS color; non-symbolic need a GPU effect
+            const iconName = actor.icon_name ?? '';
+            const giconStr = actor.gicon?.to_string?.() ?? '';
+            const isSymbolic = iconName.endsWith('-symbolic') ||
+                giconStr.includes('symbolic');
+            if (isSymbolic) {
+                actor.set_style(css);
+            } else if (tintColor) {
+                try {
+                    actor.add_effect_with_name('more-tweaks-colorize',
+                        new Clutter.ColorizeEffect({tint: tintColor}));
+                } catch { /* ColorizeEffect unavailable on this version */ }
+            }
+            actor.add_style_class_name('more-tweaks-panel-style');
+            this._styledChildren.push(actor);
+        } else if (actor instanceof St.Label) {
+            actor.set_style(css);
+            actor.add_style_class_name('more-tweaks-panel-style');
+            this._styledChildren.push(actor);
+        }
+        if (typeof actor.get_children === 'function') {
+            for (const child of actor.get_children())
+                this._colorDescendants(child, css, tintColor);
+        }
+    }
+
+    _restorePanelStyles() {
+        for (const child of this._styledChildren) {
             try {
                 child.set_style(null);
-                child.remove_style_class_name('more-tweaks-panel-spacing');
+                child.remove_style_class_name('more-tweaks-panel-style');
+                child.remove_effect_by_name('more-tweaks-colorize');
             } catch { /* actor may have been destroyed */ }
         }
-        this._addedStyleClasses = [];
+        this._styledChildren = [];
     }
 
     // ── Orchestration ─────────────────────────────────────────────────
@@ -1310,12 +1364,12 @@ class TopBarManager {
         if (!this._bool('topbar-overrides-enabled')) {
             this._restoreActivities();
             this._restoreClock();
-            this._restoreSpacing();
+            this._restorePanelStyles();
             return;
         }
         this._applyActivities();
         this._applyClock();
-        this._applySpacing();
+        this._applyPanelStyles();
     }
 }
 
