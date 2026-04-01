@@ -73,7 +73,7 @@ class MoreTweaksApplication(Adw.Application):
         about = Adw.AboutWindow(
             application_name="More Tweaks",
             application_icon=APP_ID,
-            version="1.0.4",
+            version="0.1",
             developer_name="n14395",
             license_type=Gtk.License.GPL_3_0,
             website="https://github.com/n14395/more-gnome-tweaks",

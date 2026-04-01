@@ -33,7 +33,7 @@ Download the `.flatpak` bundle from the [Releases](https://github.com/n14395/mor
 
 ```bash
 flatpak install --user flathub org.gnome.Platform//50
-flatpak install --user MoreTweaks-1.1.0-x86_64.flatpak
+flatpak install --user MoreTweaks-0.1-x86_64.flatpak
 flatpak run com.n14395.MoreTweaks
 ```
 
@@ -67,7 +67,7 @@ python3 -m more_tweaks
 ```bash
 flatpak install --user flathub org.gnome.Sdk//50
 flatpak-builder --user --force-clean --repo=flatpak-repo flatpak-build com.n14395.MoreTweaks.yml
-flatpak build-bundle flatpak-repo MoreTweaks-1.1.0-x86_64.flatpak com.n14395.MoreTweaks \
+flatpak build-bundle flatpak-repo MoreTweaks-0.1-x86_64.flatpak com.n14395.MoreTweaks \
   --runtime-repo=https://flathub.org/repo/flathub.flatpakrepo
 ```
 

@@ -41,41 +41,22 @@
   <content_rating type="oars-1.1" />
 
   <releases>
-    <release version="1.0.4" date="2026-03-27">
+    <release version="0.1" date="2026-04-01">
       <description>
-        <p>Animation system overhaul and polish.</p>
+        <p>Initial public release of More Tweaks.</p>
         <ul>
+          <li>250+ hidden GNOME desktop tweaks across 19 categories</li>
+          <li>Bundled GNOME Shell animation runtime with 57 presets and 5 curated profiles</li>
+          <li>Full-text search and category filtering</li>
           <li>Native keyboard shortcut recorder for keybinding controls</li>
           <li>Tabbed animation groups (System, Windows, Window States, etc.)</li>
-          <li>System animation timing overrides (overview, app grid, workspace switch, etc.)</li>
-          <li>Renamed extension prefix to com.n14395</li>
-          <li>Animation controls greyed out until extension is installed</li>
-          <li>Removed redundant value labels from tweak rows</li>
-          <li>Fixed scroll behaviour for categories with few controls</li>
-        </ul>
-      </description>
-    </release>
-    <release version="1.0.1" date="2026-03-26">
-      <description>
-        <p>UI improvements and polish.</p>
-        <ul>
+          <li>System animation timing overrides</li>
           <li>About dialog, primary menu, and keyboard shortcuts</li>
           <li>Global search across all categories</li>
           <li>Adaptive sidebar layout with Adw.NavigationSplitView</li>
           <li>Copy gsettings command button on each tweak</li>
           <li>Per-tweak reset-to-default button</li>
           <li>Drag-and-drop list editor for array settings</li>
-          <li>Reorganized animation section into focused groups</li>
-        </ul>
-      </description>
-    </release>
-    <release version="1.0.0" date="2026-03-26">
-      <description>
-        <p>Initial release of More Tweaks.</p>
-        <ul>
-          <li>250+ hidden GNOME desktop tweaks across 19 categories</li>
-          <li>Bundled GNOME Shell animation runtime with 57 presets and 5 curated profiles</li>
-          <li>Full-text search and category filtering</li>
         </ul>
       </description>
     </release>

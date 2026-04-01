@@ -1,6 +1,6 @@
 [project]
 name = "more-tweaks"
-version = "1.1.0"
+version = "0.1"
 description = "A GNOME GUI for hidden tweaks and settings."
 readme = "README.md"
 license = "GPL-3.0-or-later"
