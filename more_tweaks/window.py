@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
+from datetime import datetime, timezone
 from pathlib import Path
 import subprocess
 import tempfile
@@ -3206,6 +3208,16 @@ class MoreTweaksWindow(Adw.ApplicationWindow):
         menu_button.set_menu_model(menu)
         header.pack_end(menu_button)
 
+        import_button = Gtk.Button(icon_name="document-open-symbolic")
+        import_button.set_tooltip_text("Import settings")
+        import_button.connect("clicked", self._on_import_clicked)
+        header.pack_end(import_button)
+
+        export_button = Gtk.Button(icon_name="document-save-symbolic")
+        export_button.set_tooltip_text("Export settings")
+        export_button.connect("clicked", self._on_export_clicked)
+        header.pack_end(export_button)
+
         toolbar.add_top_bar(header)
         self.toast_overlay.set_child(toolbar)
         self.set_content(self.toast_overlay)
@@ -3494,3 +3506,165 @@ class MoreTweaksWindow(Adw.ApplicationWindow):
                 row = TweakRow(tweak, self.backend)
             self.rendered_rows.append(row)
             self.group.add(row)
+
+    # ── Export / Import ───────────────────────────────────────────────
+
+    # Keys written by the extension at runtime — never export these.
+    _EPHEMERAL_EXTENSION_KEYS = frozenset({
+        "detected-shell-version",
+        "active-capabilities",
+        "panel-items-available",
+    })
+
+    def _on_export_clicked(self, _button: Gtk.Button):
+        dialog = Gtk.FileDialog()
+        dialog.set_title("Export settings")
+        dialog.set_initial_name("more-tweaks-backup.json")
+        json_filter = Gtk.FileFilter()
+        json_filter.set_name("JSON files")
+        json_filter.add_pattern("*.json")
+        filters = Gio.ListStore.new(Gtk.FileFilter)
+        filters.append(json_filter)
+        dialog.set_filters(filters)
+        dialog.save(self, None, self._on_export_finish)
+
+    def _on_export_finish(self, dialog: Gtk.FileDialog, result):
+        try:
+            gfile = dialog.save_finish(result)
+        except GLib.Error:
+            return  # user cancelled
+        path = gfile.get_path()
+        if path is None:
+            return
+        try:
+            data = self._collect_export_data()
+            Path(path).write_text(
+                json.dumps(data, indent=2, ensure_ascii=False, default=str),
+                encoding="utf-8",
+            )
+            self._show_toast("Settings exported")
+        except Exception as exc:
+            self._show_toast(f"Export failed: {exc}")
+
+    def _collect_export_data(self) -> dict:
+        data: dict = {
+            "format_version": 1,
+            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "tweaks": {},
+            "extension": {},
+        }
+
+        # GSettings tweaks — only non-default values
+        seen: set[tuple[str, str]] = set()
+        for tweak in TWEAKS:
+            pair = (tweak.schema, tweak.key)
+            if pair in seen:
+                continue
+            seen.add(pair)
+            if not self.backend.is_available(tweak):
+                continue
+            if self.backend.is_default(tweak):
+                continue
+            settings = self.backend._get_settings(tweak.schema)
+            if settings is None:
+                continue
+            value = settings.get_value(tweak.key).unpack()
+            data["tweaks"][f"{tweak.schema}::{tweak.key}"] = value
+
+        # Extension settings — only non-default values
+        ab = self.animation_section.backend
+        if ab.available and ab._settings is not None and ab._schema is not None:
+            for key in ab._schema.list_keys():
+                if key in self._EPHEMERAL_EXTENSION_KEYS:
+                    continue
+                current = ab._settings.get_value(key)
+                default = ab._settings.get_default_value(key)
+                if default is not None and current.equal(default):
+                    continue
+                data["extension"][key] = current.unpack()
+
+        return data
+
+    def _on_import_clicked(self, _button: Gtk.Button):
+        dialog = Gtk.FileDialog()
+        dialog.set_title("Import settings")
+        json_filter = Gtk.FileFilter()
+        json_filter.set_name("JSON files")
+        json_filter.add_pattern("*.json")
+        filters = Gio.ListStore.new(Gtk.FileFilter)
+        filters.append(json_filter)
+        dialog.set_filters(filters)
+        dialog.open(self, None, self._on_import_finish)
+
+    def _on_import_finish(self, dialog: Gtk.FileDialog, result):
+        try:
+            gfile = dialog.open_finish(result)
+        except GLib.Error:
+            return  # user cancelled
+        path = gfile.get_path()
+        if path is None:
+            return
+        try:
+            raw = Path(path).read_text(encoding="utf-8")
+            data = json.loads(raw)
+        except (OSError, json.JSONDecodeError) as exc:
+            self._show_toast(f"Import failed: {exc}")
+            return
+        if not isinstance(data, dict) or data.get("format_version") != 1:
+            self._show_toast("Unrecognised backup format")
+            return
+        try:
+            count = self._apply_import_data(data)
+            self._show_toast(f"{count} settings restored")
+        except Exception as exc:
+            self._show_toast(f"Import failed: {exc}")
+        self._refresh_all_sections()
+
+    def _apply_import_data(self, data: dict) -> int:
+        count = 0
+
+        # GSettings tweaks
+        for composite_key, value in data.get("tweaks", {}).items():
+            if "::" not in composite_key:
+                continue
+            schema_str, key = composite_key.split("::", 1)
+            settings = self.backend._get_settings(schema_str)
+            if settings is None:
+                continue
+            default = settings.get_default_value(key)
+            if default is None:
+                continue
+            type_str = default.get_type_string()
+            try:
+                settings.set_value(key, GLib.Variant(type_str, value))
+                count += 1
+            except (TypeError, GLib.Error):
+                continue
+
+        # Extension settings
+        ab = self.animation_section.backend
+        if ab.available and ab._settings is not None:
+            for key, value in data.get("extension", {}).items():
+                if not ab._has_key(key):
+                    continue
+                if key in self._EPHEMERAL_EXTENSION_KEYS:
+                    continue
+                default = ab._settings.get_default_value(key)
+                if default is None:
+                    continue
+                type_str = default.get_type_string()
+                try:
+                    ab._settings.set_value(key, GLib.Variant(type_str, value))
+                    count += 1
+                except (TypeError, GLib.Error):
+                    continue
+
+        return count
+
+    def _refresh_all_sections(self):
+        """Refresh every section so they reflect newly imported values."""
+        self.refresh_rows()
+        self.animation_section.refresh()
+        self.topbar_section.refresh()
+        self.tiling_section.refresh()
+        self.touchpad_section.refresh()
