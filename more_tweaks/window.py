@@ -584,6 +584,30 @@ class TweakRow(Adw.ActionRow):
 
             return box
 
+        if self.tweak.control == "duration":
+            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+            box.set_valign(Gtk.Align.CENTER)
+            max_secs = int(self.tweak.max_value or 7200)
+            self._dur_h = Gtk.SpinButton.new_with_range(0, max_secs // 3600, 1)
+            self._dur_h.set_width_chars(2)
+            self._dur_h.set_numeric(True)
+            self._dur_h.connect("value-changed", self._on_duration_changed)
+            self._dur_m = Gtk.SpinButton.new_with_range(0, 59, 1)
+            self._dur_m.set_width_chars(2)
+            self._dur_m.set_numeric(True)
+            self._dur_m.connect("value-changed", self._on_duration_changed)
+            self._dur_s = Gtk.SpinButton.new_with_range(0, 59, 5)
+            self._dur_s.set_width_chars(2)
+            self._dur_s.set_numeric(True)
+            self._dur_s.connect("value-changed", self._on_duration_changed)
+            for spin, label in [(self._dur_h, "h"), (self._dur_m, "m"), (self._dur_s, "s")]:
+                box.append(spin)
+                lbl = Gtk.Label(label=label)
+                lbl.add_css_class("dim-label")
+                lbl.add_css_class("caption")
+                box.append(lbl)
+            return box
+
         if self.tweak.control == "choice":
             labels = [choice.label for choice in self.tweak.choices]
             self.dropdown = Gtk.DropDown.new_from_strings(labels)
@@ -728,6 +752,11 @@ class TweakRow(Adw.ActionRow):
                 self.switch.set_active(active)
             elif self.tweak.control == "number":
                 self.spin.set_value(float(value or 0))
+            elif self.tweak.control == "duration":
+                total = int(value or 0)
+                self._dur_h.set_value(total // 3600)
+                self._dur_m.set_value((total % 3600) // 60)
+                self._dur_s.set_value(total % 60)
             elif self.tweak.control == "choice":
                 selected = 0
                 for index, choice in enumerate(self.tweak.choices):
@@ -931,6 +960,18 @@ class TweakRow(Adw.ActionRow):
             value = int(round(value))
 
         if not self.backend.write(self.tweak, value):
+            self.refresh()
+            return
+        self.refresh()
+
+    def _on_duration_changed(self, _spin: Gtk.SpinButton):
+        if self._updating:
+            return
+        h = int(self._dur_h.get_value())
+        m = int(self._dur_m.get_value())
+        s = int(self._dur_s.get_value())
+        total = h * 3600 + m * 60 + s
+        if not self.backend.write(self.tweak, total):
             self.refresh()
             return
         self.refresh()
