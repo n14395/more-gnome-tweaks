@@ -338,6 +338,18 @@
       <description>Hex color for top bar icons (#rrggbb). Empty string uses default theme color.</description>
     </key>
 
+    <key name="panel-color-symbolic" type="b">
+      <default>true</default>
+      <summary>Colour symbolic icons</summary>
+      <description>Apply the icon color override to symbolic (theme) icons and text labels on the top bar.</description>
+    </key>
+
+    <key name="panel-color-other" type="b">
+      <default>true</default>
+      <summary>Colour non-symbolic icons</summary>
+      <description>Apply the icon color override to non-symbolic (third-party) icons on the top bar using a GPU tint effect.</description>
+    </key>
+
     <key name="panel-layout" type="s">
       <default>''</default>
       <summary>Top bar panel layout</summary>

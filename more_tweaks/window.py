@@ -212,6 +212,10 @@ def _check_capability(
                 f"{feature_label} requires GNOME {_MIN_GNOME_FOR_EXTENSION} or later."
             ),
         )
+    # Don't show capability failures when a restart is pending — the
+    # reported capabilities are stale from before the update.
+    if ab.needs_shell_restart:
+        return None
     caps = ab.get_active_capabilities()
     if caps and not caps.get(capability, True):
         desc = (
@@ -1760,11 +1764,9 @@ class TopBarSection(_ScrollPreservingSection):
             ))
             return
 
-        # Capability checks for panel layout and top bar overrides
+        # Panel layout capability check
         panel_blocked = _check_capability(
             self._animation_backend, "panelLayout", "Panel Layout Customization")
-        topbar_blocked = _check_capability(
-            self._animation_backend, "topBar", "Top Bar Overrides")
 
         if panel_blocked is None:
             if not self._animation_backend.get_panel_items_available():
@@ -1784,11 +1786,9 @@ class TopBarSection(_ScrollPreservingSection):
         else:
             self.append(panel_blocked)
 
-        # Top bar overrides — extension-backed appearance tweaks
-        if topbar_blocked is None:
-            self._build_topbar_overrides()
-        else:
-            self.append(topbar_blocked)
+        # Top bar overrides — always show controls; they write to GSettings
+        # and take effect once the extension processes them.
+        self._build_topbar_overrides()
 
     def _build_topbar_overrides(self):
         ab = self._animation_backend
@@ -1892,9 +1892,37 @@ class TopBarSection(_ScrollPreservingSection):
         # Panel icon color group
         color_group = Adw.PreferencesGroup(title="Panel Icon Color")
 
+        color_sym_row = Adw.ActionRow(
+            title="Colour symbolic icons",
+            subtitle="Apply the chosen colour to theme icons and text labels.",
+        )
+        color_sym_switch = Gtk.Switch(valign=Gtk.Align.CENTER)
+        color_sym_switch.set_active(
+            ab._get_boolean("panel-color-symbolic", default=True))
+        color_sym_switch.set_sensitive(enabled)
+        color_sym_switch.connect("notify::active", self._on_topbar_bool_changed,
+                                 "panel-color-symbolic")
+        color_sym_row.add_suffix(color_sym_switch)
+        color_group.add(color_sym_row)
+        self._topbar_widgets["panel-color-symbolic"] = color_sym_switch
+
+        color_other_row = Adw.ActionRow(
+            title="Colour non-symbolic icons",
+            subtitle="Tint third-party indicator icons (e.g. Nextcloud, Solaar).",
+        )
+        color_other_switch = Gtk.Switch(valign=Gtk.Align.CENTER)
+        color_other_switch.set_active(
+            ab._get_boolean("panel-color-other", default=True))
+        color_other_switch.set_sensitive(enabled)
+        color_other_switch.connect("notify::active", self._on_topbar_bool_changed,
+                                   "panel-color-other")
+        color_other_row.add_suffix(color_other_switch)
+        color_group.add(color_other_row)
+        self._topbar_widgets["panel-color-other"] = color_other_switch
+
         color_row = Adw.ActionRow(
             title="Icon color",
-            subtitle="Override the color of all top bar icons and text.",
+            subtitle="Choose the colour to apply to the enabled icon types above.",
         )
         color_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
         color_box.set_valign(Gtk.Align.CENTER)

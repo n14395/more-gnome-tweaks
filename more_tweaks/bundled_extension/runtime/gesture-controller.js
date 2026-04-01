@@ -78,12 +78,12 @@ export class GestureController {
 
     _hasKey(name) {
         try { this._settings.get_boolean(name); return true; }
-        catch { return false; }
+        catch (_e) { return false; }
     }
 
     _str(key) {
         try { return this._settings.get_string(key); }
-        catch { return ACT_DEFAULT; }
+        catch (_e) { return ACT_DEFAULT; }
     }
 
     _reapply() {
@@ -133,7 +133,7 @@ export class GestureController {
 
     _restorePatch(patch) {
         if (!patch) return;
-        try { global.stage.disconnect(patch.newId); } catch {}
+        try { global.stage.disconnect(patch.newId); } catch (_e) {}
         patch.gesture._stageCaptureEvent = global.stage.connect(
             'captured-event::touchpad',
             patch.gesture._handleEvent.bind(patch.gesture),

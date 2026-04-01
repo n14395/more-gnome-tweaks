@@ -12,7 +12,7 @@ export default class MoreTweaksShellRuntime extends Extension {
         // Report detected GNOME Shell version
         const shellVersion = getShellMajorVersion();
         try { settings.set_string('detected-shell-version', String(shellVersion)); }
-        catch { /* key may not exist in older schema */ }
+        catch (_e) { /* key may not exist in older schema */ }
 
         // Animation controller (window/dialog/notification animations,
         // system timings, top bar, tiling, panel layout)
@@ -38,20 +38,20 @@ export default class MoreTweaksShellRuntime extends Extension {
 
         // Write final capabilities
         try { settings.set_string('active-capabilities', JSON.stringify(capabilities)); }
-        catch { /* key may not exist */ }
+        catch (_e) { /* key may not exist */ }
     }
 
     disable() {
-        try { this._gestureController?.disable(); } catch {}
+        try { this._gestureController?.disable(); } catch (_e) {}
         this._gestureController = null;
 
-        try { this._controller?.disable(); } catch {}
+        try { this._controller?.disable(); } catch (_e) {}
         this._controller = null;
 
         // Clear capabilities and version on disable
         if (this._settings) {
-            try { this._settings.set_string('active-capabilities', ''); } catch {}
-            try { this._settings.set_string('detected-shell-version', ''); } catch {}
+            try { this._settings.set_string('active-capabilities', ''); } catch (_e) {}
+            try { this._settings.set_string('detected-shell-version', ''); } catch (_e) {}
         }
         this._settings = null;
     }

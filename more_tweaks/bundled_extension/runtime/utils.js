@@ -13,7 +13,7 @@ export function getShellMajorVersion() {
     try {
         const major = parseInt(PACKAGE_VERSION.split('.')[0], 10);
         _shellMajorVersion = isNaN(major) ? 0 : major;
-    } catch {
+    } catch (_e) {
         _shellMajorVersion = 0;
     }
     return _shellMajorVersion;

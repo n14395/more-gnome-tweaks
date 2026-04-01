@@ -131,9 +131,9 @@ export class AnimationController {
 
     disable() {
         for (const signalId of this._windowSignals)
-            try { global.window_manager.disconnect(signalId); } catch {}
+            try { global.window_manager.disconnect(signalId); } catch (_e) {}
         for (const signalId of this._displaySignals)
-            try { global.display.disconnect(signalId); } catch {}
+            try { global.display.disconnect(signalId); } catch (_e) {}
         this._windowSignals = [];
         this._displaySignals = [];
         this._activeGrab = null;
@@ -147,19 +147,19 @@ export class AnimationController {
                 Main.wm._shellwm.completed_minimize = this._origCompletedMinimize;
             if (this._origCompletedUnminimize)
                 Main.wm._shellwm.completed_unminimize = this._origCompletedUnminimize;
-        } catch {}
+        } catch (_e) {}
 
         try {
             if (this._origUpdateShowingNotification)
                 Main.messageTray._updateShowingNotification = this._origUpdateShowingNotification;
             if (this._origHideNotification)
                 Main.messageTray._hideNotification = this._origHideNotification;
-        } catch {}
+        } catch (_e) {}
 
-        try { this._restoreSystemTimings(); } catch {}
+        try { this._restoreSystemTimings(); } catch (_e) {}
 
         if (this._settingsChangedId) {
-            try { this._settings.disconnect(this._settingsChangedId); } catch {}
+            try { this._settings.disconnect(this._settingsChangedId); } catch (_e) {}
             this._settingsChangedId = null;
         }
 
@@ -168,12 +168,12 @@ export class AnimationController {
                 resetActor(actor);
             if (Main.messageTray?._bannerBin)
                 resetActor(Main.messageTray._bannerBin);
-        } catch {}
+        } catch (_e) {}
 
-        try { this._tileGridManager.disable(); } catch {}
-        try { this._tileGapManager.disable(); } catch {}
-        try { this._topBarManager.disable(); } catch {}
-        try { this._panelManager.disable(); } catch {}
+        try { this._tileGridManager.disable(); } catch (_e) {}
+        try { this._tileGapManager.disable(); } catch (_e) {}
+        try { this._topBarManager.disable(); } catch (_e) {}
+        try { this._panelManager.disable(); } catch (_e) {}
         logDebug(this._settings, 'animation controller disabled');
     }
 
@@ -751,8 +751,8 @@ class TileGapManager {
         this._restoreAll();
     }
 
-    _bool(key) { try { return this._settings.get_boolean(key); } catch { return false; } }
-    _int(key)  { try { return this._settings.get_int(key); }     catch { return 0; } }
+    _bool(key) { try { return this._settings.get_boolean(key); } catch (_e) { return false; } }
+    _int(key)  { try { return this._settings.get_int(key); }     catch (_e) { return 0; } }
 
     _apply() {
         if (!this._bool('tile-gaps-enabled')) {
@@ -896,8 +896,8 @@ class TileGridManager {
         this._signalIds = [];
     }
 
-    _bool(key) { try { return this._settings.get_boolean(key); } catch { return false; } }
-    _int(key)  { try { return this._settings.get_int(key); }     catch { return 0; } }
+    _bool(key) { try { return this._settings.get_boolean(key); } catch (_e) { return false; } }
+    _int(key)  { try { return this._settings.get_int(key); }     catch (_e) { return 0; } }
 
     // ── Grab lifecycle ───────────────────────────────────────────
 
@@ -919,7 +919,7 @@ class TileGridManager {
             this._savedEdgeTiling = this._mutterSettings.get_boolean('edge-tiling');
             if (this._savedEdgeTiling)
                 this._mutterSettings.set_boolean('edge-tiling', false);
-        } catch {
+        } catch (_e) {
             this._mutterSettings = null;
             this._savedEdgeTiling = null;
         }
@@ -940,7 +940,7 @@ class TileGridManager {
         }
         // Restore GNOME's built-in edge-tiling
         if (this._mutterSettings && this._savedEdgeTiling !== null) {
-            try { this._mutterSettings.set_boolean('edge-tiling', this._savedEdgeTiling); } catch {}
+            try { this._mutterSettings.set_boolean('edge-tiling', this._savedEdgeTiling); } catch (_e) {}
             this._mutterSettings = null;
             this._savedEdgeTiling = null;
         }
@@ -965,7 +965,7 @@ class TileGridManager {
                 const m = win.get_maximized?.() ?? 0;
                 if (m) win.unmaximize(m);
                 win.move_resize_frame(false, x, saved.y, saved.width, saved.height);
-            } catch { /* window may have been destroyed */ }
+            } catch (_e) { /* window may have been destroyed */ }
         }
 
         const delay = Math.max(25, this._int('tile-preview-delay'));
@@ -989,7 +989,7 @@ class TileGridManager {
             this._tiledWindows.set(win, {
                 x: cur.x, y: cur.y, width: cur.width, height: cur.height,
             });
-        } catch { /* ignore */ }
+        } catch (_e) { /* ignore */ }
 
         const workArea = win.get_work_area_current_monitor();
         const rect = this._calcTileRect(loc, workArea);
@@ -999,7 +999,7 @@ class TileGridManager {
                 const m = win.get_maximized?.() ?? 0;
                 if (m) win.unmaximize(m);
                 win.move_resize_frame(false, rect.x, rect.y, rect.width, rect.height);
-            } catch { /* window may have been destroyed */ }
+            } catch (_e) { /* window may have been destroyed */ }
             return GLib.SOURCE_REMOVE;
         });
     }
@@ -1168,9 +1168,13 @@ class TopBarManager {
             'clock-custom-format',
             'panel-icon-spacing',
             'panel-icon-color',
+            'panel-color-symbolic',
+            'panel-color-other',
         ]) {
-            const id = this._settings.connect(`changed::${key}`, () => this._apply());
-            this._signalIds.push(id);
+            try {
+                const id = this._settings.connect(`changed::${key}`, () => this._apply());
+                this._signalIds.push(id);
+            } catch (_e) { /* key may not exist in older compiled schema */ }
         }
     }
 
@@ -1184,13 +1188,13 @@ class TopBarManager {
     }
 
     _str(key) {
-        try { return this._settings.get_string(key); } catch { return ''; }
+        try { return this._settings.get_string(key); } catch (_e) { return ''; }
     }
     _bool(key) {
-        try { return this._settings.get_boolean(key); } catch { return false; }
+        try { return this._settings.get_boolean(key); } catch (_e) { return false; }
     }
     _int(key) {
-        try { return this._settings.get_int(key); } catch { return -1; }
+        try { return this._settings.get_int(key); } catch (_e) { return -1; }
     }
 
     // ── Activities button ─────────────────────────────────────────────
@@ -1238,7 +1242,7 @@ class TopBarManager {
             if (fmt.includes('%S') && !this._clockTimerId) {
                 this._clockTimerId = GLib.timeout_add_seconds(
                     GLib.PRIORITY_DEFAULT, 1, () => {
-                        try { dateMenu._updateClock(); } catch { /* */ }
+                        try { dateMenu._updateClock(); } catch (_e) { /* */ }
                         return GLib.SOURCE_CONTINUE;
                     }
                 );
@@ -1263,7 +1267,7 @@ class TopBarManager {
             // Restore the original _updateClock method and trigger it
             dateMenu._updateClock = this._origClockUpdate;
             this._origClockUpdate = null;
-            try { dateMenu._updateClock(); } catch { /* */ }
+            try { dateMenu._updateClock(); } catch (_e) { /* */ }
         } else {
             // _updateClock didn't exist originally (GNOME 45+ uses
             // bind_property); remove our override and refresh from WallClock
@@ -1271,7 +1275,7 @@ class TopBarManager {
             try {
                 if (dateMenu._clock && dateMenu._clockDisplay)
                     dateMenu._clockDisplay.text = dateMenu._clock.clock;
-            } catch { /* */ }
+            } catch (_e) { /* */ }
         }
     }
 
@@ -1306,6 +1310,13 @@ class TopBarManager {
             }
         }
 
+        // Default to true if keys don't exist in the compiled schema yet
+        let colorSymbolic = true, colorOther = true;
+        try { colorSymbolic = this._settings.get_boolean('panel-color-symbolic'); }
+        catch (_e) { /* key missing — default true */ }
+        try { colorOther = this._settings.get_boolean('panel-color-other'); }
+        catch (_e) { /* key missing — default true */ }
+
         for (const box of [Main.panel._leftBox, Main.panel._centerBox, Main.panel._rightBox]) {
             for (const child of box.get_children()) {
                 if (spacingCss) {
@@ -1314,36 +1325,48 @@ class TopBarManager {
                     this._styledChildren.push(child);
                 }
                 if (colorCss)
-                    this._colorDescendants(child, colorCss, tintColor);
+                    this._colorDescendants(child, colorCss, tintColor,
+                        colorSymbolic, colorOther);
             }
         }
     }
 
-    _colorDescendants(actor, css, tintColor) {
+    _colorDescendants(actor, css, tintColor, colorSymbolic, colorOther) {
         if (actor instanceof St.Icon) {
-            // Symbolic icons respond to CSS color; non-symbolic need a GPU effect
             const iconName = actor.icon_name ?? '';
             const giconStr = actor.gicon?.to_string?.() ?? '';
             const isSymbolic = iconName.endsWith('-symbolic') ||
                 giconStr.includes('symbolic');
-            if (isSymbolic) {
+            if (isSymbolic && colorSymbolic) {
                 actor.set_style(css);
-            } else if (tintColor) {
+                actor.add_style_class_name('more-tweaks-panel-style');
+                this._styledChildren.push(actor);
+            } else if (!isSymbolic && colorOther && tintColor) {
                 try {
                     actor.add_effect_with_name('more-tweaks-colorize',
                         new Clutter.ColorizeEffect({tint: tintColor}));
-                } catch { /* ColorizeEffect unavailable on this version */ }
+                } catch (_e) { /* ColorizeEffect unavailable */ }
+                actor.add_style_class_name('more-tweaks-panel-style');
+                this._styledChildren.push(actor);
             }
-            actor.add_style_class_name('more-tweaks-panel-style');
-            this._styledChildren.push(actor);
-        } else if (actor instanceof St.Label) {
-            actor.set_style(css);
-            actor.add_style_class_name('more-tweaks-panel-style');
-            this._styledChildren.push(actor);
+        } else if (colorSymbolic && typeof actor.set_style === 'function') {
+            // Apply color to non-Icon St.Widget descendants: labels,
+            // workspace indicators, custom widgets.  Skip indicator
+            // containers (direct children of panel boxes) whose inline
+            // style is managed by the spacing logic above.
+            const isContainer = actor.get_parent?.() === Main.panel._leftBox ||
+                actor.get_parent?.() === Main.panel._centerBox ||
+                actor.get_parent?.() === Main.panel._rightBox;
+            if (!isContainer) {
+                actor.set_style(css);
+                actor.add_style_class_name('more-tweaks-panel-style');
+                this._styledChildren.push(actor);
+            }
         }
         if (typeof actor.get_children === 'function') {
             for (const child of actor.get_children())
-                this._colorDescendants(child, css, tintColor);
+                this._colorDescendants(child, css, tintColor,
+                    colorSymbolic, colorOther);
         }
     }
 
@@ -1353,7 +1376,7 @@ class TopBarManager {
                 child.set_style(null);
                 child.remove_style_class_name('more-tweaks-panel-style');
                 child.remove_effect_by_name('more-tweaks-colorize');
-            } catch { /* actor may have been destroyed */ }
+            } catch (_e) { /* actor may have been destroyed */ }
         }
         this._styledChildren = [];
     }
@@ -1525,7 +1548,7 @@ class PanelLayoutManager {
         let layout;
         try {
             layout = JSON.parse(raw);
-        } catch {
+        } catch (_e) {
             return;
         }
 
