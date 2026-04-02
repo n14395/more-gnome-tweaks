@@ -1367,88 +1367,99 @@ class ExtensionListRow(Adw.ExpanderRow):
         self.refresh()
 
 
-def _build_runtime_group(
+def _build_runtime_status(
     backend: AnimationBackend,
     on_install: Callable[[], None],
     on_enable_changed: Callable[[bool], None],
-) -> Adw.PreferencesGroup:
-    """Build the shared runtime install/enable/status group used by multiple sections."""
-    group = Adw.PreferencesGroup(
-        title="Runtime",
-        description="First-party GNOME Shell runtime bundled with More Tweaks.",
-    )
+    feature_label: str = "Extension features",
+) -> list[Gtk.Widget]:
+    """Build a compact runtime status display.
 
-    # Status row
-    status_row = Adw.ActionRow(title="Bundled shell runtime")
-    status_row.set_subtitle(backend.status_text)
-    status_label = Gtk.Label(label="Installed" if backend.available else "Not installed")
-    status_label.add_css_class("dim-label")
-    status_row.add_suffix(status_label)
-    group.add(status_row)
-
-    # Install/update button
-    install_row = Adw.ActionRow(title="Install or update runtime")
-    install_row.set_subtitle(
-        "Copies the bundled More Tweaks shell runtime into your local GNOME Shell extensions folder."
-    )
-    install_button = Gtk.Button(label="Update" if backend.available else "Install")
-    install_button.add_css_class("pill")
-    install_button.set_valign(Gtk.Align.CENTER)
-    install_button.connect("clicked", lambda _btn: on_install())
-    install_row.add_suffix(install_button)
-    group.add(install_row)
-
-    # Enable switch
-    switch_row = Adw.ActionRow(title="Enable bundled runtime")
-    switch_row.set_subtitle(
-        "Turn on the app-owned GNOME Shell runtime."
-    )
-    switch = Gtk.Switch(valign=Gtk.Align.CENTER)
-    switch.set_active(backend.runtime_enabled)
-    switch.connect("notify::active", lambda sw, _pspec: on_enable_changed(sw.get_active()))
-    switch_row.add_suffix(switch)
-    group.add(switch_row)
-
-    # Runtime state row
-    runtime_row = Adw.ActionRow(title="Bundled runtime state")
+    Returns 0-1 widgets depending on state:
+    - Running & healthy: empty list
+    - Error: Adw.Banner with retry
+    - Needs logout / not installed / disabled: single ActionRow with button
+    """
+    # Error — prominent banner
     if backend.runtime_error:
-        runtime_row.set_subtitle(
-            "GNOME Shell reported an error while loading the bundled More Tweaks runtime."
-        )
-        runtime_label = Gtk.Label(label="Runtime error")
-    elif backend.needs_shell_restart:
-        runtime_row.set_subtitle(
-            "The runtime files are installed, but GNOME Shell has not detected them yet. "
-            "Log out and log back in for the extension to be recognized."
-        )
-        runtime_label = Gtk.Label(label="Log out required")
-    elif backend.available and backend.extension_state is None:
-        runtime_row.set_subtitle(
-            "The runtime files are installed, but GNOME Shell has not picked them up yet. "
-            "A logout/login may be needed."
-        )
-        runtime_label = Gtk.Label(label="Restart shell")
-    elif not backend.runtime_enabled:
-        runtime_row.set_subtitle(
-            "The bundled runtime is installed but disabled."
-        )
-        runtime_label = Gtk.Label(label="Disabled")
-    else:
-        runtime_row.set_subtitle(
-            "The bundled More Tweaks runtime is active inside GNOME Shell."
-        )
-        runtime_label = Gtk.Label(label="Running")
-    runtime_label.add_css_class("dim-label")
-    runtime_row.add_suffix(runtime_label)
-    group.add(runtime_row)
+        banner = Adw.Banner(title=f"Shell runtime error: {backend.runtime_error}")
+        banner.set_button_label("Retry")
+        banner.set_revealed(True)
+        banner.connect("button-clicked", lambda _b: on_install())
+        return [banner]
 
-    # Error detail row
-    if backend.runtime_error:
-        error_row = Adw.ActionRow(title="Reported shell error")
-        error_row.set_subtitle(backend.runtime_error)
-        group.add(error_row)
+    # Needs restart after install
+    if backend.needs_shell_restart:
+        group = Adw.PreferencesGroup()
+        row = Adw.ActionRow(
+            title="Log out required",
+            subtitle="The runtime is installed but GNOME Shell hasn't detected it yet. "
+                     "Log out and log back in.",
+        )
+        icon = Gtk.Image.new_from_icon_name("system-log-out-symbolic")
+        icon.add_css_class("dim-label")
+        row.add_prefix(icon)
+        group.add(row)
+        return [group]
 
-    return group
+    # Not installed
+    if not backend.available:
+        group = Adw.PreferencesGroup()
+        row = Adw.ActionRow(
+            title="Shell runtime not installed",
+            subtitle=f"{feature_label} require the bundled GNOME Shell extension.",
+        )
+        btn = Gtk.Button(label="Install")
+        btn.add_css_class("suggested-action")
+        btn.add_css_class("pill")
+        btn.set_valign(Gtk.Align.CENTER)
+        btn.connect("clicked", lambda _b: on_install())
+        row.add_suffix(btn)
+        icon = Gtk.Image.new_from_icon_name("application-x-addon-symbolic")
+        icon.add_css_class("dim-label")
+        row.add_prefix(icon)
+        group.add(row)
+        return [group]
+
+    # Installed but disabled
+    if not backend.runtime_enabled:
+        group = Adw.PreferencesGroup()
+        row = Adw.ActionRow(
+            title="Shell runtime disabled",
+            subtitle="The extension is installed but not enabled.",
+        )
+        btn = Gtk.Button(label="Enable")
+        btn.add_css_class("suggested-action")
+        btn.add_css_class("pill")
+        btn.set_valign(Gtk.Align.CENTER)
+        btn.connect("clicked", lambda _b: on_enable_changed(True))
+        row.add_suffix(btn)
+        group.add(row)
+        return [group]
+
+    # Running but update available
+    if backend.update_available:
+        group = Adw.PreferencesGroup()
+        row = Adw.ActionRow(
+            title="Runtime update available",
+            subtitle=f"Installed version {backend.installed_version} → "
+                     f"bundled version {backend.bundled_version}. "
+                     "Update and log out to apply.",
+        )
+        btn = Gtk.Button(label="Update")
+        btn.add_css_class("suggested-action")
+        btn.add_css_class("pill")
+        btn.set_valign(Gtk.Align.CENTER)
+        btn.connect("clicked", lambda _b: on_install())
+        row.add_suffix(btn)
+        icon = Gtk.Image.new_from_icon_name("software-update-available-symbolic")
+        icon.add_css_class("dim-label")
+        row.add_prefix(icon)
+        group.add(row)
+        return [group]
+
+    # Running and up to date — nothing to show
+    return []
 
 
 def _pretty_panel_name(item_id: str) -> str:
@@ -1670,7 +1681,18 @@ class _ScrollPreservingSection(Gtk.Box):
 
     Saves and restores the nearest ancestor ScrolledWindow's scroll
     position around each rebuild so the viewport doesn't jump to the top.
+    Provides shared runtime management (install/enable/toast) so subclasses
+    don't duplicate it.
     """
+
+    def __init__(self, *args, notify: Callable[[str], None] | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._notify = notify
+        self._animation_backend = AnimationBackend()
+
+    def _toast(self, message: str):
+        if self._notify:
+            self._notify(message)
 
     def _save_scroll(self) -> tuple[Gtk.ScrolledWindow | None, float]:
         sw = _find_ancestor_scrolled_window(self)
@@ -1682,24 +1704,40 @@ class _ScrollPreservingSection(Gtk.Box):
             return
         GLib.idle_add(lambda: (sw.get_vadjustment().set_value(pos), False)[-1])
 
+    def _on_install_runtime(self):
+        if not self._animation_backend.install_runtime():
+            self._toast("Could not install the bundled More Tweaks runtime")
+            self.refresh()
+            return
+        self._toast("Bundled More Tweaks runtime installed")
+        self.refresh()
+
+    def _on_enable_runtime(self, enabled: bool):
+        ab = self._animation_backend
+        if enabled and not ab.available and not ab.install_runtime():
+            self._toast("Could not install the bundled More Tweaks runtime")
+            self.refresh()
+            return
+        success = ab.enable_runtime() if enabled else ab.disable_runtime()
+        self._toast(
+            "Bundled More Tweaks runtime enabled"
+            if success and enabled
+            else "Bundled More Tweaks runtime disabled"
+        )
+        self.refresh()
+
 
 class TopBarSection(_ScrollPreservingSection):
     """Hybrid section for the Top Bar category: standard tweaks + panel reorder."""
 
     def __init__(self, notify: Callable[[str], None] | None = None):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=18)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=18, notify=notify)
         self.set_margin_bottom(48)
-        self._notify = notify
         self._backend = SettingsBackend()
-        self._animation_backend = AnimationBackend()
         self._tweak_rows: list[TweakRow | TextListRow] = []
         self._panel_section = PanelReorderSection(self._animation_backend)
         self._topbar_widgets: dict[str, Gtk.Widget] = {}
         self._updating_topbar = False
-
-    def _toast(self, message: str):
-        if self._notify:
-            self._notify(message)
 
     def refresh(self):
         sw, pos = self._save_scroll()
@@ -1730,13 +1768,14 @@ class TopBarSection(_ScrollPreservingSection):
             tweaks_group.add(row)
         self.append(tweaks_group)
 
-        # Runtime management — same controls as Animations
-        runtime_group = _build_runtime_group(
+        # Runtime status — compact single-row display when action needed
+        for w in _build_runtime_status(
             self._animation_backend,
             on_install=self._on_install_runtime,
             on_enable_changed=self._on_enable_runtime,
-        )
-        self.append(runtime_group)
+            feature_label="Panel layout controls",
+        ):
+            self.append(w)
 
         # Panel reorder — requires the bundled shell extension
         if self._animation_backend.needs_shell_restart:
@@ -2009,27 +2048,6 @@ class TopBarSection(_ScrollPreservingSection):
         rgba.parse("#ffffff")
         self._topbar_color_button.set_rgba(rgba)
 
-    def _on_install_runtime(self):
-        if not self._animation_backend.install_runtime():
-            self._toast("Could not install the bundled More Tweaks runtime")
-            self.refresh()
-            return
-        self._toast("Bundled More Tweaks runtime installed")
-        self.refresh()
-
-    def _on_enable_runtime(self, enabled: bool):
-        if enabled and not self._animation_backend.available and not self._animation_backend.install_runtime():
-            self._toast("Could not install the bundled More Tweaks runtime")
-            self.refresh()
-            return
-        success = self._animation_backend.enable_runtime() if enabled else self._animation_backend.disable_runtime()
-        self._toast(
-            "Bundled More Tweaks runtime enabled"
-            if success and enabled
-            else "Bundled More Tweaks runtime disabled"
-        )
-        self.refresh()
-
 
 
 # ── Tiling & Snapping section ──────────────────────────────────────────
@@ -2040,20 +2058,14 @@ class TilingSection(_ScrollPreservingSection):
     standard GSettings tweaks + extension-backed tile gap controls."""
 
     def __init__(self, notify: Callable[[str], None] | None = None):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=18)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=18, notify=notify)
         self.set_margin_bottom(48)
-        self._notify = notify
         self._backend = SettingsBackend()
-        self._animation_backend = AnimationBackend()
         self._tweak_rows: list[TweakRow | TextListRow] = []
         self._grid_widgets: dict[str, Gtk.Widget] = {}
         self._preview_widgets: dict[str, Gtk.Widget] = {}
         self._gap_widgets: dict[str, Gtk.Widget] = {}
         self._updating_gaps = False
-
-    def _toast(self, message: str):
-        if self._notify:
-            self._notify(message)
 
     def refresh(self):
         sw, pos = self._save_scroll()
@@ -2088,13 +2100,14 @@ class TilingSection(_ScrollPreservingSection):
             tweaks_group.add(row)
         self.append(tweaks_group)
 
-        # Runtime management — install / enable the shell extension
-        runtime_group = _build_runtime_group(
+        # Runtime status — compact single-row display when action needed
+        for w in _build_runtime_status(
             self._animation_backend,
             on_install=self._on_install_runtime,
             on_enable_changed=self._on_enable_runtime,
-        )
-        self.append(runtime_group)
+            feature_label="Tile gap controls",
+        ):
+            self.append(w)
 
         if self._animation_backend.needs_shell_restart:
             self.append(_build_status_page(
@@ -2319,26 +2332,6 @@ class TilingSection(_ScrollPreservingSection):
     def _on_preview_int_changed(self, spin: Gtk.SpinButton, key: str):
         self._animation_backend._set_int(key, int(spin.get_value()))
 
-    def _on_install_runtime(self):
-        if not self._animation_backend.install_runtime():
-            self._toast("Could not install the bundled More Tweaks runtime")
-            self.refresh()
-            return
-        self._toast("Bundled More Tweaks runtime installed")
-        self.refresh()
-
-    def _on_enable_runtime(self, enabled: bool):
-        if enabled and not self._animation_backend.available and not self._animation_backend.install_runtime():
-            self._toast("Could not install the bundled More Tweaks runtime")
-            self.refresh()
-            return
-        success = self._animation_backend.enable_runtime() if enabled else self._animation_backend.disable_runtime()
-        self._toast(
-            "Bundled More Tweaks runtime enabled"
-            if success and enabled
-            else "Bundled More Tweaks runtime disabled"
-        )
-        self.refresh()
 
 
 # ── Gesture choice definitions ─────────────────────────────────────────
@@ -2378,18 +2371,12 @@ class TouchpadSection(_ScrollPreservingSection):
     standard touchpad tweaks + extension-backed gesture overrides."""
 
     def __init__(self, notify: Callable[[str], None] | None = None):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=18)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=18, notify=notify)
         self.set_margin_bottom(48)
-        self._notify = notify
         self._backend = SettingsBackend()
-        self._animation_backend = AnimationBackend()
         self._tweak_rows: list[TweakRow | TextListRow] = []
         self._gesture_widgets: dict[str, Gtk.DropDown] = {}
         self._updating_gestures = False
-
-    def _toast(self, message: str):
-        if self._notify:
-            self._notify(message)
 
     def refresh(self):
         sw, pos = self._save_scroll()
@@ -2421,13 +2408,14 @@ class TouchpadSection(_ScrollPreservingSection):
             tweaks_group.add(row)
         self.append(tweaks_group)
 
-        # ── Runtime management (shared widget) ─────────────────────────
-        runtime_group = _build_runtime_group(
+        # Runtime status — compact single-row display when action needed
+        for w in _build_runtime_status(
             self._animation_backend,
             on_install=self._on_install_runtime,
             on_enable_changed=self._on_enable_runtime,
-        )
-        self.append(runtime_group)
+            feature_label="Gesture overrides",
+        ):
+            self.append(w)
 
         # ── Gesture overrides (requires the extension) ─────────────────
         if self._animation_backend.needs_shell_restart:
@@ -2551,36 +2539,18 @@ class TouchpadSection(_ScrollPreservingSection):
         if 0 <= idx < len(values):
             self._animation_backend._set_string(key, values[idx])
 
-    def _on_install_runtime(self):
-        if not self._animation_backend.install_runtime():
-            self._toast("Could not install the bundled More Tweaks runtime")
-            self.refresh()
-            return
-        self._toast("Bundled More Tweaks runtime installed")
-        self.refresh()
-
-    def _on_enable_runtime(self, enabled: bool):
-        if enabled and not self._animation_backend.available and not self._animation_backend.install_runtime():
-            self._toast("Could not install the bundled More Tweaks runtime")
-            self.refresh()
-            return
-        success = self._animation_backend.enable_runtime() if enabled else self._animation_backend.disable_runtime()
-        self._toast(
-            "Bundled More Tweaks runtime enabled"
-            if success and enabled
-            else "Bundled More Tweaks runtime disabled"
-        )
-        self.refresh()
 
 
 class AnimationSection(_ScrollPreservingSection):
+    @property
+    def backend(self):
+        return self._animation_backend
+
     def __init__(self, notify: Callable[[str], None] | None = None):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=18)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=18, notify=notify)
         self.set_margin_bottom(48)
-        self.backend = AnimationBackend()
         self.custom_presets = CustomPresetStore()
         self.desktop_settings = Gio.Settings.new("org.gnome.desktop.interface")
-        self._notify = notify
 
         self.refresh()
 
@@ -2600,12 +2570,29 @@ class AnimationSection(_ScrollPreservingSection):
             saved_tab = self._notebook.get_current_page()
 
         _clear_box(self)
-        banner = self._build_runtime_banner()
-        if banner is not None:
-            self.append(banner)
 
-        for group in self._build_runtime_group():
-            self.append(group)
+        # Runtime status — compact display (banner/row only when action needed)
+        for w in _build_runtime_status(
+            self.backend,
+            on_install=self._on_install_runtime,
+            on_enable_changed=self._on_enable_runtime,
+            feature_label="Animation controls",
+        ):
+            self.append(w)
+
+        # GNOME animations-off warning (separate from runtime status)
+        if not self.desktop_settings.get_boolean("enable-animations"):
+            warn_group = Adw.PreferencesGroup()
+            warn_row = Adw.ActionRow(
+                title="GNOME animations are off",
+                subtitle="The desktop-wide animation switch is disabled. "
+                         "GNOME Shell may suppress visible motion.",
+            )
+            warn_label = Gtk.Label(label="Blocking")
+            warn_label.add_css_class("dim-label")
+            warn_row.add_suffix(warn_label)
+            warn_group.add(warn_row)
+            self.append(warn_group)
 
         # If the extension isn't ready, show a prominent status page
         # instead of a wall of greyed-out controls.
@@ -2691,60 +2678,6 @@ class AnimationSection(_ScrollPreservingSection):
         if saved_tab >= 0 and saved_tab < n_pages:
             notebook.set_current_page(saved_tab)
         self._saved_notebook_tab = saved_tab
-
-    def _build_runtime_banner(self) -> Adw.Banner | None:
-        if not self.backend.runtime_error:
-            return None
-
-        banner = Adw.Banner(
-            title="GNOME Shell reports an error in the bundled More Tweaks runtime. Retry the runtime after changing the shell hooks."
-        )
-        banner.set_button_label("Retry runtime")
-        banner.set_revealed(True)
-        banner.connect("button-clicked", self._on_retry_runtime_clicked)
-        return banner
-
-    def _build_runtime_group(self) -> list[Adw.PreferencesGroup]:
-        """Group A: Runtime -- installation and enable state."""
-        group = _build_runtime_group(
-            self.backend,
-            on_install=self._on_install_runtime_clicked_action,
-            on_enable_changed=self._on_enable_runtime_action,
-        )
-
-        # Animation-specific: shell warning row
-        if not self.desktop_settings.get_boolean("enable-animations"):
-            shell_warning_row = Adw.ActionRow(title="GNOME animations are off")
-            shell_warning_row.set_subtitle(
-                "Turn that desktop-wide switch back on or GNOME Shell may suppress visible motion even when the bundled runtime is enabled."
-            )
-            warning_label = Gtk.Label(label="Blocking")
-            warning_label.add_css_class("dim-label")
-            shell_warning_row.add_suffix(warning_label)
-            group.add(shell_warning_row)
-
-        return [group]
-
-    def _on_install_runtime_clicked_action(self):
-        if not self.backend.install_runtime():
-            self._toast("Could not install the bundled More Tweaks runtime")
-            self.refresh()
-            return
-        self._toast("Bundled More Tweaks runtime installed")
-        self.refresh()
-
-    def _on_enable_runtime_action(self, enabled: bool):
-        if enabled and not self.backend.available and not self.backend.install_runtime():
-            self._toast("Could not install the bundled More Tweaks runtime")
-            self.refresh()
-            return
-        success = self.backend.enable_runtime() if enabled else self.backend.disable_runtime()
-        self._toast(
-            "Bundled More Tweaks runtime enabled"
-            if success and enabled
-            else "Bundled More Tweaks runtime disabled"
-        )
-        self.refresh()
 
     def _build_controls_group(self) -> list[Adw.PreferencesGroup]:
         """Group B: Controls -- main animation controls."""
@@ -2896,6 +2829,18 @@ class AnimationSection(_ScrollPreservingSection):
         )
         debug_row.add_suffix(debug_switch)
         group.add(debug_row)
+
+        # Runtime enable/disable switch (power-user toggle)
+        enable_row = Adw.ActionRow(title="Bundled runtime enabled")
+        enable_row.set_subtitle("Manually enable or disable the GNOME Shell extension.")
+        enable_switch = Gtk.Switch(valign=Gtk.Align.CENTER)
+        enable_switch.set_active(self.backend.runtime_enabled)
+        enable_switch.connect(
+            "notify::active",
+            lambda sw, _pspec: self._on_enable_runtime(sw.get_active()),
+        )
+        enable_row.add_suffix(enable_switch)
+        group.add(enable_row)
 
         # Test animation button
         group.add(self._build_test_animation_row())
@@ -3198,12 +3143,6 @@ class AnimationSection(_ScrollPreservingSection):
         )
         self.refresh()
 
-    def _on_retry_runtime_clicked(self, _banner: Adw.Banner):
-        if not self.backend.restart_runtime():
-            self._toast("Could not restart the bundled More Tweaks runtime")
-        else:
-            self._toast("Bundled More Tweaks runtime restarted")
-        self.refresh()
 
     def _on_profile_selected(self, dropdown: Gtk.DropDown, _pspec):
         selected = dropdown.get_selected()

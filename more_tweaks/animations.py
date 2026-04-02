@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import pwd
 import shutil
@@ -249,6 +250,27 @@ class AnimationBackend:
     @property
     def installed_on_disk(self) -> bool:
         return (INSTALLED_EXTENSION_PATH / "metadata.json").is_file()
+
+    @staticmethod
+    def _read_metadata_version(path: Path) -> int:
+        """Read the integer 'version' field from a metadata.json, or 0."""
+        try:
+            return int(json.loads((path / "metadata.json").read_text()).get("version", 0))
+        except (OSError, json.JSONDecodeError, ValueError, TypeError):
+            return 0
+
+    @property
+    def bundled_version(self) -> int:
+        return self._read_metadata_version(BUNDLED_EXTENSION_PATH)
+
+    @property
+    def installed_version(self) -> int:
+        return self._read_metadata_version(INSTALLED_EXTENSION_PATH)
+
+    @property
+    def update_available(self) -> bool:
+        """True when the installed version is older than the bundled one."""
+        return self.installed_on_disk and self.installed_version < self.bundled_version
 
     @property
     def needs_shell_restart(self) -> bool:
