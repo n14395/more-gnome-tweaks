@@ -1157,19 +1157,51 @@ class TopBarManager {
         this._origClockUpdate = null;
         this._clockTimerId = null;
         this._styledChildren = [];
-        this._deferredApplyId = null;
+        this._deferredApplyIds = [];
+        this._childChangedId = null;
+        this._boxSignalIds = [];
     }
 
     enable() {
         this._apply();
-        // Re-apply after a short delay so that third-party indicators
-        // (SNI/AppIndicator) that load their icons asynchronously after
-        // session start get colored too.
-        this._deferredApplyId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 3000, () => {
-            this._deferredApplyId = null;
-            this._apply();
-            return GLib.SOURCE_REMOVE;
-        });
+        // Re-apply after short delays so that third-party indicators
+        // that load icons asynchronously get colored too.
+        this._deferredApplyIds = [3000, 10000, 35000, 60000].map(ms =>
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, ms, () => {
+                this._apply();
+                return GLib.SOURCE_REMOVE;
+            })
+        );
+        // Watch for indicators added/removed from panel boxes.  Re-apply
+        // styles when panel children change.
+        const ver = getShellMajorVersion();
+        const addSignal = ver >= 47 ? 'child-added' : 'actor-added';
+        const removeSignal = ver >= 47 ? 'child-removed' : 'actor-removed';
+        // Debounced re-apply: when a new indicator appears, its icon may
+        // load asynchronously — wait a moment before re-applying styles.
+        const debouncedApply = () => {
+            if (this._childChangedId) GLib.source_remove(this._childChangedId);
+            this._childChangedId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+                this._childChangedId = null;
+                this._apply();
+                return GLib.SOURCE_REMOVE;
+            });
+        };
+        for (const box of [Main.panel._leftBox, Main.panel._centerBox, Main.panel._rightBox]) {
+            try {
+                const addId = box.connect(addSignal, (_b, child) => {
+                    this._watchIndicatorVisibility(child, debouncedApply);
+                    debouncedApply();
+                });
+                const removeId = box.connect(removeSignal, debouncedApply);
+                this._boxSignalIds.push({box, id: addId}, {box, id: removeId});
+            } catch (_e) { /* signal not available */ }
+            // Watch existing indicators for visibility changes.  This catches
+            // indicators like Pamac that start hidden and become visible later
+            // (e.g. after a 30s boot wait + async update check).
+            for (const child of box.get_children())
+                this._watchIndicatorVisibility(child, debouncedApply);
+        }
         for (const key of [
             'topbar-overrides-enabled',
             'activities-button-visible',
@@ -1188,11 +1220,29 @@ class TopBarManager {
         }
     }
 
+    _watchIndicatorVisibility(container, callback) {
+        // The container is an St.Bin; the actual indicator is its .child.
+        // Watch the indicator's visibility — when it changes from hidden to
+        // visible (e.g. Pamac after finding updates), trigger a re-apply.
+        const indicator = container.child || container;
+        try {
+            const id = indicator.connect('notify::visible', callback);
+            this._boxSignalIds.push({box: indicator, id});
+        } catch (_e) { /* */ }
+    }
+
     disable() {
-        if (this._deferredApplyId) {
-            GLib.source_remove(this._deferredApplyId);
-            this._deferredApplyId = null;
+        for (const id of (this._deferredApplyIds ?? []))
+            GLib.source_remove(id);
+        this._deferredApplyIds = [];
+        if (this._childChangedId) {
+            GLib.source_remove(this._childChangedId);
+            this._childChangedId = null;
         }
+        for (const {box, id} of this._boxSignalIds) {
+            try { box.disconnect(id); } catch (_e) { /* */ }
+        }
+        this._boxSignalIds = [];
         for (const id of this._signalIds)
             this._settings.disconnect(id);
         this._signalIds = [];
@@ -1314,14 +1364,16 @@ class TopBarManager {
         // Parse hex color into a Cogl.Color for the ColorizeEffect
         let tintColor = null;
         if (color) {
-            const hex = color.replace('#', '');
-            const r = parseInt(hex.substring(0, 2), 16) / 255;
-            const g = parseInt(hex.substring(2, 4), 16) / 255;
-            const b = parseInt(hex.substring(4, 6), 16) / 255;
-            if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
-                tintColor = new Cogl.Color();
-                tintColor.init_from_4f(r, g, b, 1.0);
-            }
+            try {
+                const hex = color.replace('#', '');
+                const r = parseInt(hex.substring(0, 2), 16) / 255;
+                const g = parseInt(hex.substring(2, 4), 16) / 255;
+                const b = parseInt(hex.substring(4, 6), 16) / 255;
+                if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+                    tintColor = new Cogl.Color();
+                    tintColor.init_from_4f(r, g, b, 1.0);
+                }
+            } catch (_e) { /* color parse failed */ }
         }
 
         // Default to true if keys don't exist in the compiled schema yet
@@ -1337,6 +1389,10 @@ class TopBarManager {
         if (colorCss && colorSymbolic) containerCss += colorCss;
         containerCss = containerCss.trim() || null;
 
+        let colorActivities = true;
+        try { colorActivities = this._settings.get_boolean('panel-color-activities'); }
+        catch (_e) { /* key missing — default true */ }
+
         for (const box of [Main.panel._leftBox, Main.panel._centerBox, Main.panel._rightBox]) {
             for (const child of box.get_children()) {
                 // Apply combined spacing + color to the container itself
@@ -1345,19 +1401,19 @@ class TopBarManager {
                     child.add_style_class_name('more-tweaks-panel-style');
                     this._styledChildren.push(child);
                 }
-                // Walk ALL descendants for per-widget coloring
-                if (colorCss)
-                    this._colorDescendants(child, colorCss, tintColor,
-                        colorSymbolic, colorOther);
+                // Walk descendants for symbolic icon + label CSS coloring
+                if (colorCss && colorSymbolic)
+                    this._colorDescendants(child, colorCss);
+                // For non-symbolic icons, apply ColorizeEffect directly to
+                // each St.Icon (not the container).  This is more reliable
+                // than effecting the container because St.Bin containers
+                // can have zero allocation when the indicator is hidden.
+                if (colorOther && tintColor)
+                    this._colorizeNonSymbolicIcons(child, tintColor);
             }
         }
 
-        // The Activities button / workspace indicator draws with Clutter
-        // paint, not CSS — so CSS color has no effect.  Apply a GPU tint
-        // effect directly on the indicator actor instead.
-        let colorActivities = true;
-        try { colorActivities = this._settings.get_boolean('panel-color-activities'); }
-        catch (_e) { /* key missing — default true */ }
+        // The Activities button / workspace indicator uses Clutter paint
         if (color && colorActivities && tintColor) {
             const activities = Main.panel.statusArea?.activities;
             if (activities) {
@@ -1370,40 +1426,71 @@ class TopBarManager {
         }
     }
 
-    _colorDescendants(actor, css, tintColor, colorSymbolic, colorOther) {
-        // Skip actors already styled by the container loop
+    _isSymbolicIcon(actor) {
+        if (!(actor instanceof St.Icon)) return false;
+        const iconName = actor.icon_name ?? '';
+        if (iconName.endsWith('-symbolic')) return true;
+        // For GThemedIcon, check only the PRIMARY (first) name.
+        // GThemedIcon auto-generates -symbolic fallback names, so
+        // checking the full to_string() gives false positives.
+        const gicon = actor.gicon;
+        if (gicon) {
+            try {
+                const names = gicon.get_names?.();
+                if (names && names.length > 0)
+                    return names[0].endsWith('-symbolic');
+            } catch (_e) { /* not a ThemedIcon */ }
+        }
+        return false;
+    }
+
+    _getActorChildren(actor) {
+        // St.Bin exposes its child via .child property, not get_children().
+        // PanelMenu.Button containers are St.Bin, so we must check both.
+        const children = [];
+        if (typeof actor.get_children === 'function')
+            children.push(...actor.get_children());
+        if (actor.child && !children.includes(actor.child))
+            children.push(actor.child);
+        return children;
+    }
+
+    _hasNonSymbolicIcon(actor) {
+        if (actor instanceof St.Icon && !this._isSymbolicIcon(actor))
+            return true;
+        for (const child of this._getActorChildren(actor))
+            if (this._hasNonSymbolicIcon(child)) return true;
+        return false;
+    }
+
+    _colorizeNonSymbolicIcons(actor, tintColor) {
+        if (actor instanceof St.Icon && !this._isSymbolicIcon(actor)) {
+            try {
+                try { actor.remove_effect_by_name('more-tweaks-colorize'); }
+                catch (_e2) { /* no prior effect */ }
+                actor.add_effect_with_name('more-tweaks-colorize',
+                    new Clutter.ColorizeEffect({tint: tintColor}));
+                this._styledChildren.push(actor);
+            } catch (_e) { /* */ }
+            return;
+        }
+        for (const child of this._getActorChildren(actor))
+            this._colorizeNonSymbolicIcons(child, tintColor);
+    }
+
+    _colorDescendants(actor, css) {
+        // Apply CSS color to symbolic icons, labels, and all other
+        // St.Widget descendants.  Non-symbolic icons are handled by
+        // ColorizeEffect at the container level in _applyPanelStyles.
         const already = typeof actor.has_style_class_name === 'function' &&
             actor.has_style_class_name('more-tweaks-panel-style');
-        if (!already) {
-            if (actor instanceof St.Icon) {
-                const iconName = actor.icon_name ?? '';
-                const giconStr = actor.gicon?.to_string?.() ?? '';
-                const isSymbolic = iconName.endsWith('-symbolic') ||
-                    giconStr.includes('symbolic');
-                if (isSymbolic && colorSymbolic) {
-                    actor.set_style(css);
-                    actor.add_style_class_name('more-tweaks-panel-style');
-                    this._styledChildren.push(actor);
-                } else if (!isSymbolic && colorOther && tintColor) {
-                    try {
-                        actor.add_effect_with_name('more-tweaks-colorize',
-                            new Clutter.ColorizeEffect({tint: tintColor}));
-                    } catch (_e) { /* ColorizeEffect unavailable */ }
-                    actor.add_style_class_name('more-tweaks-panel-style');
-                    this._styledChildren.push(actor);
-                }
-            } else if (colorSymbolic && typeof actor.set_style === 'function') {
-                actor.set_style(css);
-                actor.add_style_class_name('more-tweaks-panel-style');
-                this._styledChildren.push(actor);
-            }
+        if (!already && typeof actor.set_style === 'function') {
+            actor.set_style(css);
+            actor.add_style_class_name('more-tweaks-panel-style');
+            this._styledChildren.push(actor);
         }
-        // Always recurse into children
-        if (typeof actor.get_children === 'function') {
-            for (const child of actor.get_children())
-                this._colorDescendants(child, css, tintColor,
-                    colorSymbolic, colorOther);
-        }
+        for (const child of this._getActorChildren(actor))
+            this._colorDescendants(child, css);
     }
 
     _restorePanelStyles() {
