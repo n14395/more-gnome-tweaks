@@ -1408,11 +1408,9 @@ class TopBarManager {
 
     _restorePanelStyles() {
         for (const child of this._styledChildren) {
-            try {
-                child.set_style(null);
-                child.remove_style_class_name('more-tweaks-panel-style');
-                child.remove_effect_by_name('more-tweaks-colorize');
-            } catch (_e) { /* actor may have been destroyed */ }
+            try { child.set_style(null); } catch (_e) { /* */ }
+            try { child.remove_style_class_name('more-tweaks-panel-style'); } catch (_e) { /* */ }
+            try { child.remove_effect_by_name('more-tweaks-colorize'); } catch (_e) { /* */ }
         }
         this._styledChildren = [];
     }
