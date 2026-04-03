@@ -66,22 +66,38 @@ export function getBinding(prefix) {
     };
 }
 
+const _QUALITY_SCALES = {
+    performance: {duration: 0.7, intensity: 0.7},
+    balanced:    {duration: 1.0, intensity: 1.0},
+    spectacle:   {duration: 1.2, intensity: 1.15},
+};
+
 export function getAnimationConfig(settings, binding) {
     const presetName = settings.get_string(binding.presetKey);
     const fallbackPreset = binding.defaultPreset ?? 'Glide In';
     const preset = _customPresets[presetName] ?? PRESETS[presetName] ?? PRESETS[fallbackPreset] ?? PRESETS['Glide In'];
     const reducedMotion = settings.get_boolean('reduced-motion-mode');
+    const quality = _QUALITY_SCALES[settings.get_string('effects-quality')] ?? _QUALITY_SCALES.balanced;
     const duration = settings.get_int(binding.durationKey);
     const intensity = settings.get_double(binding.intensityKey);
     const reducedPresetName = preset.reducedMotionPreset ?? null;
     const effectivePreset = reducedMotion && reducedPresetName && PRESETS[reducedPresetName]
         ? PRESETS[reducedPresetName]
         : preset;
+
+    let finalDuration = Math.round(duration * quality.duration);
+    let finalIntensity = intensity * quality.intensity;
+
+    if (reducedMotion) {
+        finalDuration = Math.max(90, Math.round(finalDuration * 0.72));
+        finalIntensity = Math.max(0.25, finalIntensity * 0.6);
+    }
+
     return {
         ...effectivePreset,
-        duration: reducedMotion ? Math.max(90, Math.round(duration * 0.72)) : duration,
+        duration: finalDuration,
         delay: settings.get_int(binding.delayKey),
-        intensity: reducedMotion ? Math.max(0.25, intensity * 0.6) : intensity,
+        intensity: finalIntensity,
         presetName,
     };
 }

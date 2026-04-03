@@ -42,6 +42,24 @@
 
   <releases>
     <release version="0.2" date="2026-04-03">
+      <description>
+        <p>Major feature update with 328 tweaks across 26 categories.</p>
+        <ul>
+          <li>78 new tweaks across 7 new categories (Touchpad, Tiling, Top Bar, and 4 additional app categories)</li>
+          <li>Import and export all settings as JSON for backup and sharing</li>
+          <li>Reset all settings to defaults with confirmation dialog</li>
+          <li>Custom animation presets: clone, edit, and save your own presets</li>
+          <li>Per-application animation rules with WM_CLASS matching</li>
+          <li>Touchpad gesture section with 3-finger and 4-finger swipe controls</li>
+          <li>Tiling section with grid columns/rows, gap controls, and preview settings</li>
+          <li>Top bar panel reordering with drag-and-drop zone layout</li>
+          <li>Animation timeline visualization for preset timing</li>
+          <li>In-app animation preview widget</li>
+          <li>Interactive motion animations (move/resize start and stop)</li>
+          <li>New control types: color picker, font chooser, duration, dimensions, and time-of-day</li>
+          <li>Live detection of external settings changes via GSettings signals</li>
+        </ul>
+      </description>
     </release>
     <release version="0.1" date="2026-04-01">
       <description>

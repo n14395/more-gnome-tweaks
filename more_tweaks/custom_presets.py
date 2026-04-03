@@ -2,9 +2,12 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import pwd
 from pathlib import Path
+
+_log = logging.getLogger("more_tweaks.custom_presets")
 
 from .preset_data import PresetPhase, PresetSetup, TransformPreset
 
@@ -26,6 +29,7 @@ class CustomPresetStore:
                 data = json.loads(CUSTOM_PRESETS_FILE.read_text())
                 self._presets = data.get("presets", {})
             except (json.JSONDecodeError, OSError):
+                _log.warning("Failed to load custom presets from %s", CUSTOM_PRESETS_FILE, exc_info=True)
                 self._presets = {}
         else:
             self._presets = {}
@@ -96,6 +100,7 @@ class CustomPresetStore:
                 phases=tuple(phases),
             )
         except (TypeError, KeyError):
+            _log.debug("Failed to parse custom preset %r", name, exc_info=True)
             return None
 
     @staticmethod

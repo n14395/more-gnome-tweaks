@@ -3,10 +3,15 @@ from __future__ import annotations
 from more_tweaks.data import CATEGORIES, CATEGORY_TWEAK_ORDER, TWEAKS, filter_tweaks
 
 VALID_CONTROLS = {
-    "boolean", "boolean-inverted", "number", "choice",
-    "text", "text-list", "keybinding", "feature-toggle",
+    "boolean", "boolean-inverted", "choice", "color", "dimensions",
+    "duration", "extension-list", "feature-toggle", "file", "folder",
+    "font", "keybinding", "number", "text", "text-list", "theme",
+    "time-of-day",
 }
-VALID_VALUE_TYPES = {"boolean", "string", "int", "uint32", "uint64", "double", "array"}
+VALID_VALUE_TYPES = {
+    "array", "boolean", "double", "int", "int32", "string",
+    "tuple-ii", "uint32", "uint64",
+}
 CATEGORY_IDS = {c.id for c in CATEGORIES}
 
 

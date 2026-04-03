@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 import subprocess
 import tempfile
+
+_log = logging.getLogger("more_tweaks.window")
 
 import gi
 
@@ -467,6 +470,7 @@ class SettingsBackend:
 
             return settings.set_value(tweak.key, GLib.Variant(type_string, value))
         except Exception:
+            _log.warning("Failed to write %s::%s", tweak.schema, tweak.key, exc_info=True)
             self._suppressed.discard((tweak.schema, tweak.key))
             return False
 
@@ -482,6 +486,7 @@ class SettingsBackend:
             settings.reset(tweak.key)
             return True
         except Exception:
+            _log.warning("Failed to reset %s::%s", tweak.schema, tweak.key, exc_info=True)
             self._suppressed.discard((tweak.schema, tweak.key))
             return False
 
@@ -1129,7 +1134,7 @@ class TextListRow(Adw.ExpanderRow):
                     self.tweak.key, GLib.Variant(type_string, self._items)
                 )
         except Exception:
-            pass
+            _log.warning("Failed to write text-list %s::%s", self.tweak.schema, self.tweak.key, exc_info=True)
 
     def _rebuild_rows(self):
         for row in self._sub_rows:
@@ -1377,6 +1382,7 @@ class ExtensionListRow(Adw.ExpanderRow):
             )
             success = result is not None and bool(result.unpack()[0])
         except Exception:
+            _log.warning("Failed to toggle extension %s", uuid, exc_info=True)
             success = False
         if success:
             if enable:
@@ -3265,6 +3271,7 @@ class AnimationSection(_ScrollPreservingSection):
             Gio.AppInfo.launch_default_for_uri(uri, None)
             self._toast(f"Opened log snapshot: {log_path}")
         except Exception:
+            _log.warning("Could not open log snapshot", exc_info=True)
             self._toast("Could not open the log snapshot")
 
     def _on_binding_enabled_changed(self, switch: Gtk.Switch, _pspec, key: str):
@@ -3464,16 +3471,52 @@ class AnimationSection(_ScrollPreservingSection):
             self.refresh()
 
         def _on_preview_update(*_args):
-            new_setup = {}
-            for key, spin in setup_spins.items():
-                new_setup[key] = spin.get_value()
-            new_setup["opacity"] = int(new_setup["opacity"])
+            from .preset_data import PresetPhase, PresetSetup, TransformPreset
             try:
-                tp = self.custom_presets.to_transform_preset(preset_name)
-                if tp:
-                    preview.play(tp, 300, 0, 1.0)
+                cur_setup = PresetSetup(
+                    opacity=int(setup_spins["opacity"].get_value()),
+                    scale_x=setup_spins["scaleX"].get_value(),
+                    scale_y=setup_spins["scaleY"].get_value(),
+                    translation_x=setup_spins["translationX"].get_value(),
+                    translation_y=setup_spins["translationY"].get_value(),
+                    rotation_z=setup_spins["rotationZ"].get_value(),
+                    pivot_x=setup_spins["pivotX"].get_value(),
+                    pivot_y=setup_spins["pivotY"].get_value(),
+                )
+                cur_phases = []
+                for pw in phase_widgets:
+                    p_kwargs = {}
+                    for key, spin in pw.items():
+                        if key == "_easing_dd":
+                            sel = spin.get_selected()
+                            p_kwargs["mode"] = easing_options[sel] if sel < len(easing_options) else "EASE_OUT_CUBIC"
+                        elif key == "opacity":
+                            p_kwargs["opacity"] = int(spin.get_value())
+                        elif key == "durationScale":
+                            p_kwargs["duration_scale"] = spin.get_value()
+                        else:
+                            p_kwargs[{"scaleX": "scale_x", "scaleY": "scale_y",
+                                       "translationX": "translation_x", "translationY": "translation_y",
+                                       "rotationZ": "rotation_z"}.get(key, key)] = spin.get_value()
+                    cur_phases.append(PresetPhase(**p_kwargs))
+                tp = TransformPreset(
+                    family=data.get("family", "Custom"),
+                    setup=cur_setup,
+                    phases=tuple(cur_phases),
+                )
+                preview.play(tp, 300, 0, 1.0)
             except Exception:
-                pass
+                _log.debug("Preview update failed for preset %r", preset_name, exc_info=True)
+
+        # Connect all spin buttons and dropdowns to live preview
+        for spin in setup_spins.values():
+            spin.connect("value-changed", _on_preview_update)
+        for pw in phase_widgets:
+            for key, widget in pw.items():
+                if key == "_easing_dd":
+                    widget.connect("notify::selected", _on_preview_update)
+                else:
+                    widget.connect("value-changed", _on_preview_update)
 
         save_btn.connect("clicked", _on_save)
         delete_btn.connect("clicked", _on_delete)
@@ -4020,6 +4063,7 @@ class MoreTweaksWindow(Adw.ApplicationWindow):
                         ab._settings.reset(key)
                         count += 1
                     except Exception:
+                        _log.debug("Failed to reset extension key %s", key, exc_info=True)
                         continue
         return count
 
@@ -4060,6 +4104,7 @@ class MoreTweaksWindow(Adw.ApplicationWindow):
             )
             self._show_toast("Settings exported")
         except Exception as exc:
+            _log.warning("Export failed", exc_info=True)
             self._show_toast(f"Export failed: {exc}")
 
     def _collect_export_data(self) -> dict:
@@ -4133,6 +4178,7 @@ class MoreTweaksWindow(Adw.ApplicationWindow):
             count = self._apply_import_data(data)
             self._show_toast(f"{count} settings restored")
         except Exception as exc:
+            _log.warning("Import failed", exc_info=True)
             self._show_toast(f"Import failed: {exc}")
         self._refresh_all_sections()
 
@@ -4155,6 +4201,7 @@ class MoreTweaksWindow(Adw.ApplicationWindow):
                 settings.set_value(key, GLib.Variant(type_str, value))
                 count += 1
             except (TypeError, GLib.Error):
+                _log.debug("Import: skipped %s::%s", schema_str, key, exc_info=True)
                 continue
 
         # Extension settings
@@ -4173,6 +4220,7 @@ class MoreTweaksWindow(Adw.ApplicationWindow):
                     ab._settings.set_value(key, GLib.Variant(type_str, value))
                     count += 1
                 except (TypeError, GLib.Error):
+                    _log.debug("Import: skipped extension key %s", key, exc_info=True)
                     continue
 
         return count

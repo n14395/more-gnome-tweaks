@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import importlib.metadata
+import logging
+import os
+
 import gi
 
 gi.require_version("Adw", "1")
@@ -19,6 +23,14 @@ class MoreTweaksApplication(Adw.Application):
 
     def do_startup(self):
         Adw.Application.do_startup(self)
+
+        # Configure logging — DEBUG when MORE_TWEAKS_DEBUG=1, WARNING otherwise
+        level = logging.DEBUG if os.environ.get("MORE_TWEAKS_DEBUG") == "1" else logging.WARNING
+        logging.basicConfig(
+            format="%(name)s: %(levelname)s: %(message)s",
+            level=level,
+        )
+        logging.getLogger("more_tweaks").setLevel(level)
 
         # Register bundled icon so it resolves when running from source
         from pathlib import Path
@@ -78,7 +90,7 @@ class MoreTweaksApplication(Adw.Application):
         about = Adw.AboutWindow(
             application_name="More Tweaks",
             application_icon=APP_ID,
-            version="0.1",
+            version=importlib.metadata.version("more-tweaks"),
             developer_name="n14395",
             license_type=Gtk.License.GPL_3_0,
             website="https://github.com/n14395/more-gnome-tweaks",

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import pwd
 import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+
+_log = logging.getLogger("more_tweaks.animations")
 
 import gi
 
@@ -36,7 +39,7 @@ def detect_gnome_shell_version() -> int:
             if word and word[0].isdigit():
                 return int(word.split(".")[0])
     except (OSError, subprocess.TimeoutExpired, ValueError, IndexError):
-        pass
+        _log.debug("Could not detect GNOME Shell version", exc_info=True)
     return 0
 
 
@@ -222,6 +225,7 @@ class AnimationBackend:
                 None,
             )
         except Exception:
+            _log.debug("Could not connect to Shell Extensions DBus", exc_info=True)
             return None
 
     def _load_extension_info(self) -> dict[str, object]:
@@ -237,6 +241,7 @@ class AnimationBackend:
                 None,
             )
         except Exception:
+            _log.debug("GetExtensionInfo DBus call failed", exc_info=True)
             return {}
         if result is None:
             return {}
@@ -255,6 +260,7 @@ class AnimationBackend:
                 None,
             )
         except Exception:
+            _log.warning("DBus call %s failed", method, exc_info=True)
             return False
         self.refresh_runtime_state()
         if result is None:
@@ -272,6 +278,7 @@ class AnimationBackend:
         try:
             return int(json.loads((path / "metadata.json").read_text()).get("version", 0))
         except (OSError, json.JSONDecodeError, ValueError, TypeError):
+            _log.debug("Could not read metadata version from %s", path, exc_info=True)
             return 0
 
     @property
@@ -331,7 +338,7 @@ class AnimationBackend:
                 text=True,
             )
         except (OSError, subprocess.CalledProcessError):
-            # Fallback: direct file copy (e.g. gnome-extensions CLI missing)
+            _log.info("gnome-extensions CLI install failed, falling back to direct copy", exc_info=True)
             try:
                 INSTALLED_EXTENSION_PATH.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copytree(BUNDLED_EXTENSION_PATH, INSTALLED_EXTENSION_PATH, dirs_exist_ok=True)
@@ -347,6 +354,7 @@ class AnimationBackend:
                     enabled_extensions.append(EXTENSION_UUID)
                     shell_settings.set_strv("enabled-extensions", enabled_extensions)
             except (OSError, shutil.Error, subprocess.CalledProcessError):
+                _log.warning("Extension install failed (both methods)", exc_info=True)
                 return False
         self.refresh_runtime_state()
         # GNOME Shell must restart to pick up the updated extension code,
@@ -501,6 +509,7 @@ class AnimationBackend:
                     self._settings.set_string(key, str(value))
             self._settings.apply()
         except Exception:
+            _log.warning("Failed to apply profile %r", profile_name, exc_info=True)
             return False
         self.restart_runtime()
         return True
@@ -634,6 +643,7 @@ class AnimationBackend:
             for key in self._schema.list_keys():
                 self._settings.reset(key)
         except Exception:
+            _log.warning("Failed to restore extension defaults", exc_info=True)
             return False
         self.restart_runtime()
         return True
