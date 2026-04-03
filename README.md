@@ -14,7 +14,7 @@ A GTK4 + libadwaita app that surfaces hidden GNOME settings through a single sea
 - **Full-text search** across names, descriptions, schemas, keys, and tags
 - **Settings export/import** with diff preview before applying
 - **Bundled GNOME Shell extension** (GNOME 45-49) providing:
-  - 65 animation presets across 5 curated profiles with per-binding tuning
+  - 65 animation presets with per-binding tuning
   - Physics-based interactive effects (wobbly move, spring snap, rubber stretch)
   - Custom preset authoring with live preview, phase editing, and looping playback
   - Per-app animation overrides

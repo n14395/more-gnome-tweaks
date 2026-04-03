@@ -4,8 +4,6 @@ from more_tweaks.animation_catalog import (
     BINDING_DEFINITIONS,
     GROUP_DEFINITIONS,
     GROUPS_BY_ID,
-    PROFILE_DEFAULTS,
-    PROFILE_NAMES,
 )
 
 
@@ -65,45 +63,3 @@ class TestBindingDefinitions:
             )
 
 
-class TestProfiles:
-    def test_all_profiles_present(self):
-        for name in PROFILE_NAMES:
-            assert name in PROFILE_DEFAULTS, (
-                f"Profile {name!r} missing from PROFILE_DEFAULTS"
-            )
-
-    def test_profile_names_non_empty(self):
-        assert len(PROFILE_NAMES) > 0
-
-    def test_profile_presets_reference_valid_names(self):
-        binding_by_id = {b.id: b for b in BINDING_DEFINITIONS}
-        for profile_name, defaults in PROFILE_DEFAULTS.items():
-            for key, value in defaults.items():
-                if key.endswith("-preset"):
-                    binding_id = key.removesuffix("-preset")
-                    if binding_id in binding_by_id:
-                        b = binding_by_id[binding_id]
-                        if b.preset_names:
-                            assert value in b.preset_names, (
-                                f"Profile {profile_name!r}, key {key!r}: "
-                                f"preset {value!r} not in {b.id} preset_names"
-                            )
-
-    def test_profile_keys_reference_valid_bindings(self):
-        binding_ids = {b.id for b in BINDING_DEFINITIONS}
-        known_suffixes = ("-enabled", "-preset", "-duration-ms", "-delay-ms", "-intensity")
-        for profile_name, defaults in PROFILE_DEFAULTS.items():
-            for key in defaults:
-                matched = False
-                for suffix in known_suffixes:
-                    if key.endswith(suffix):
-                        binding_id = key.removesuffix(suffix)
-                        assert binding_id in binding_ids, (
-                            f"Profile {profile_name!r}, key {key!r}: "
-                            f"unknown binding {binding_id!r}"
-                        )
-                        matched = True
-                        break
-                assert matched, (
-                    f"Profile {profile_name!r}: unrecognized key format {key!r}"
-                )

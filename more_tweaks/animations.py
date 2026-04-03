@@ -22,8 +22,6 @@ from .animation_catalog import (
     BINDINGS_BY_ID,
     GROUP_DEFINITIONS,
     GROUPS_BY_ID,
-    PROFILE_DEFAULTS,
-    PROFILE_NAMES,
     BindingDefinition,
 )
 
@@ -480,39 +478,6 @@ class AnimationBackend:
             )
             for spec in GROUP_SPECS
         )
-
-    def get_active_profile(self) -> str:
-        return self._get_string("active-profile", PROFILE_NAMES[0])
-
-    def set_active_profile(self, profile_name: str) -> bool:
-        if profile_name not in PROFILE_NAMES:
-            return False
-        success = self._set_string("active-profile", profile_name)
-        if success:
-            self.restart_runtime()
-        return success
-
-    def apply_profile(self, profile_name: str) -> bool:
-        if self._settings is None or profile_name not in PROFILE_DEFAULTS:
-            return False
-        try:
-            self._settings.delay()
-            self._settings.set_string("active-profile", profile_name)
-            for key, value in PROFILE_DEFAULTS[profile_name].items():
-                if isinstance(value, bool):
-                    self._settings.set_boolean(key, value)
-                elif isinstance(value, int):
-                    self._settings.set_int(key, value)
-                elif isinstance(value, float):
-                    self._settings.set_double(key, value)
-                else:
-                    self._settings.set_string(key, str(value))
-            self._settings.apply()
-        except Exception:
-            _log.warning("Failed to apply profile %r", profile_name, exc_info=True)
-            return False
-        self.restart_runtime()
-        return True
 
     def set_binding_enabled(self, key: str, value: bool) -> bool:
         success = self._set_boolean(key, value)

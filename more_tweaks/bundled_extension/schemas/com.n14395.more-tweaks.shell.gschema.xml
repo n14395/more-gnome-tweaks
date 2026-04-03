@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
   <schema path="/com/n14395/more-tweaks/shell/" id="com.n14395.more-tweaks.shell">
-    <key name="active-profile" type="s">
-      <default>'Balanced'</default>
-      <summary>Active curated profile</summary>
-      <description>Current bundled animation profile.</description>
-    </key>
     <key name="debug-logging" type="b">
       <default>false</default>
       <summary>Enable runtime debug logging</summary>

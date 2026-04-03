@@ -9,8 +9,6 @@ from more_tweaks.animation_catalog import (
     MOVE_START_PRESETS,
     MOVE_STOP_PRESETS,
     PER_APP_ACTIONS,
-    PROFILE_DEFAULTS,
-    PROFILE_NAMES,
     RESIZE_START_PRESETS,
     RESIZE_STOP_PRESETS,
     UNMAXIMIZE_PRESETS,
@@ -47,37 +45,6 @@ class TestPresetCrossValidation:
                 f"Binding {binding.id!r}: default_preset {binding.default_preset!r} "
                 f"not in preset_names"
             )
-
-
-class TestProfileCompleteness:
-    def test_all_profiles_have_entries(self):
-        for name in PROFILE_NAMES:
-            assert name in PROFILE_DEFAULTS, f"Profile {name!r} missing from PROFILE_DEFAULTS"
-
-    def test_profile_preset_values_valid(self):
-        known = set(TRANSFORM_PRESETS.keys())
-        for profile_name, settings in PROFILE_DEFAULTS.items():
-            for key, value in settings.items():
-                if key.endswith("-preset") and isinstance(value, str):
-                    assert value in known, (
-                        f"Profile {profile_name!r} key {key!r} references "
-                        f"unknown preset {value!r}"
-                    )
-
-    def test_profile_keys_reference_valid_bindings(self):
-        valid_keys: set[str] = set()
-        for binding in BINDING_DEFINITIONS:
-            valid_keys.add(binding.enabled_key)
-            valid_keys.add(binding.preset_key)
-            valid_keys.add(binding.duration_key)
-            valid_keys.add(binding.delay_key)
-            valid_keys.add(binding.intensity_key)
-        for profile_name, settings in PROFILE_DEFAULTS.items():
-            for key in settings:
-                assert key in valid_keys, (
-                    f"Profile {profile_name!r} contains key {key!r} "
-                    f"not matching any binding"
-                )
 
 
 class TestBindingConstraints:

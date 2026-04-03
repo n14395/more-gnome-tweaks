@@ -3,8 +3,6 @@ import GLib from 'gi://GLib';
 import {
     BINDINGS,
     PRESETS,
-    PROFILES,
-    PROFILE_NAMES,
     transformEffect,
 } from './catalog.js';
 
@@ -32,7 +30,7 @@ export function loadCustomPresets() {
     }
 }
 
-export {PRESETS, PROFILES, PROFILE_NAMES, BINDINGS};
+export {PRESETS, BINDINGS};
 
 export function getBinding(prefix) {
     const binding = BINDINGS_BY_ID.get(prefix);

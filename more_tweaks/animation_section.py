@@ -15,7 +15,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
 from .animation_preview import AnimationPreviewWidget  # noqa: E402
-from .animations import AnimationBackend, PROFILE_NAMES  # noqa: E402
+from .animations import AnimationBackend  # noqa: E402
 from .animation_catalog import BINDING_DEFINITIONS, PER_APP_ACTIONS  # noqa: E402
 from .custom_presets import CustomPresetStore, DEFAULT_BLANK_PRESET  # noqa: E402
 from .preset_data import TRANSFORM_PRESETS  # noqa: E402
@@ -41,6 +41,7 @@ class AnimationSection(_ScrollPreservingSection):
         self.set_margin_bottom(48)
         self.custom_presets = CustomPresetStore()
         self.desktop_settings = Gio.Settings.new("org.gnome.desktop.interface")
+        self._expanded_bindings: set[str] = set()
 
         self.refresh()
 
@@ -118,9 +119,9 @@ class AnimationSection(_ScrollPreservingSection):
 
         for group in self._build_controls_group():
             self.append(group)
-        for group in self._build_custom_presets_group():
-            self.append(group)
         for group in self._build_diagnostics_group():
+            self.append(group)
+        for group in self._build_custom_presets_group():
             self.append(group)
 
         group_states = self.backend.get_group_states()
@@ -186,22 +187,6 @@ class AnimationSection(_ScrollPreservingSection):
         shell_switch.connect("notify::active", self._on_shell_animations_changed)
         shell_row.add_suffix(shell_switch)
         group.add(shell_row)
-
-        # Curated profile dropdown
-        profile_row = Adw.ActionRow(title="Curated profile")
-        profile_row.set_subtitle(
-            "Quickly swap between tuned motion personalities before adjusting individual bindings."
-        )
-        profile_dropdown = Gtk.DropDown.new_from_strings(list(PROFILE_NAMES))
-        profile_dropdown.set_valign(Gtk.Align.CENTER)
-        active_profile = self.backend.get_active_profile()
-        try:
-            profile_dropdown.set_selected(PROFILE_NAMES.index(active_profile))
-        except ValueError:
-            profile_dropdown.set_selected(0)
-        profile_dropdown.connect("notify::selected", self._on_profile_selected)
-        profile_row.add_suffix(profile_dropdown)
-        group.add(profile_row)
 
         # Reduced motion switch
         reduced_motion_row = Adw.ActionRow(title="Reduced motion mode")
@@ -375,7 +360,7 @@ class AnimationSection(_ScrollPreservingSection):
         # Runtime source (informational)
         source_row = Adw.ActionRow(title="Runtime source")
         source_row.set_subtitle(
-            "This animation runtime ships inside More Tweaks and is separate from third-party extensions like Burn My Windows or Animation Tweaks."
+            "This animation runtime ships inside More Tweaks as a bundled GNOME Shell extension."
         )
         source_label = Gtk.Label(label="Bundled")
         source_label.add_css_class("dim-label")
@@ -443,13 +428,10 @@ class AnimationSection(_ScrollPreservingSection):
         enable_row.add_suffix(enable_switch)
         group.add(enable_row)
 
-        # Test animation button
-        group.add(self._build_test_animation_row())
-
         # Restore defaults button
         defaults_row = Adw.ActionRow(title="Restore bundled defaults")
         defaults_row.set_subtitle(
-            "Reset curated profile, timings, and hidden advanced controls back to their shipped values."
+            "Reset timings and hidden advanced controls back to their shipped values."
         )
         defaults_button = Gtk.Button(label="Restore")
         defaults_button.add_css_class("pill")
@@ -633,6 +615,9 @@ class AnimationSection(_ScrollPreservingSection):
 
     def _build_binding_row(self, binding) -> Adw.ExpanderRow:
         row = Adw.ExpanderRow(title=binding.spec.title)
+        if binding.spec.id in self._expanded_bindings:
+            row.set_expanded(True)
+        row.connect("notify::expanded", self._on_binding_row_expanded, binding.spec.id)
         tier_prefix = "Advanced. " if binding.spec.tier != "core" else ""
         subtitle = f"{tier_prefix}{binding.spec.summary}"
         if binding.preset_name:
@@ -683,6 +668,7 @@ class AnimationSection(_ScrollPreservingSection):
         row.add_suffix(control_box)
 
         duration_row = Adw.ActionRow(title="Duration")
+        duration_row.set_activatable(False)
         duration_row.set_subtitle("Visible timing for this binding.")
         duration_spin = Gtk.SpinButton.new_with_range(80, 1200, 10)
         duration_spin.set_valign(Gtk.Align.CENTER)
@@ -692,6 +678,7 @@ class AnimationSection(_ScrollPreservingSection):
         row.add_row(duration_row)
 
         delay_row = Adw.ActionRow(title="Delay")
+        delay_row.set_activatable(False)
         delay_row.set_subtitle("Hidden advanced control for staggering motion.")
         delay_spin = Gtk.SpinButton.new_with_range(0, 600, 10)
         delay_spin.set_valign(Gtk.Align.CENTER)
@@ -701,6 +688,7 @@ class AnimationSection(_ScrollPreservingSection):
         row.add_row(delay_row)
 
         intensity_row = Adw.ActionRow(title="Intensity")
+        intensity_row.set_activatable(False)
         intensity_row.set_subtitle("Hidden advanced control for exaggerating or softening the preset.")
         intensity_spin = Gtk.SpinButton.new_with_range(0.25, 2.0, 0.05)
         intensity_spin.set_digits(2)
@@ -715,24 +703,13 @@ class AnimationSection(_ScrollPreservingSection):
         row.add_row(intensity_row)
 
         timeline_row = Adw.ActionRow(title="Timeline")
+        timeline_row.set_activatable(False)
         timeline_row.set_subtitle("Phase breakdown for this preset.")
         timeline = AnimationTimelineWidget()
         timeline.update(binding.preset_name, binding.duration_ms, binding.delay_ms, binding.intensity)
         timeline_row.add_suffix(timeline)
         row.add_row(timeline_row)
 
-        return row
-
-    def _build_test_animation_row(self) -> Adw.ActionRow:
-        row = Adw.ActionRow(title="Test animation")
-        row.set_subtitle(
-            "Apply the Signature profile, then trigger window open, close, minimize, restore, focus, maximize, and a GNOME notification."
-        )
-        button = Gtk.Button(label="Apply signature test")
-        button.add_css_class("pill")
-        button.set_valign(Gtk.Align.CENTER)
-        button.connect("clicked", self._on_apply_test_animation_clicked)
-        row.add_suffix(button)
         return row
 
     def _on_shell_animations_changed(self, switch: Gtk.Switch, _pspec):
@@ -744,50 +721,6 @@ class AnimationSection(_ScrollPreservingSection):
         )
         self.refresh()
 
-
-    def _on_profile_selected(self, dropdown: Gtk.DropDown, _pspec):
-        selected = dropdown.get_selected()
-        if selected >= len(PROFILE_NAMES):
-            return
-        profile_name = PROFILE_NAMES[selected]
-        if not self._prepare_runtime("apply an animation profile"):
-            self.refresh()
-            return
-        if not self.backend.apply_profile(profile_name):
-            self._toast("Could not apply the selected curated profile")
-        else:
-            self._toast(f"Applied {profile_name} animation profile")
-        self.refresh()
-
-    def _on_apply_test_animation_clicked(self, _button: Gtk.Button):
-        if not self._prepare_runtime("apply a test animation"):
-            self.refresh()
-            return
-
-        if not self.desktop_settings.get_boolean("enable-animations"):
-            self.desktop_settings.set_boolean("enable-animations", True)
-            self._toast("GNOME interface animations enabled for testing")
-
-        updates = (
-            self.backend.apply_profile("Signature"),
-            self.backend.set_binding_enabled("window-open-enabled", True),
-            self.backend.set_binding_enabled("window-close-enabled", True),
-            self.backend.set_binding_enabled("window-minimize-enabled", True),
-            self.backend.set_binding_enabled("window-unminimize-enabled", True),
-            self.backend.set_binding_enabled("window-focus-enabled", True),
-            self.backend.set_binding_enabled("window-defocus-enabled", True),
-            self.backend.set_binding_enabled("window-maximize-enabled", True),
-            self.backend.set_binding_enabled("window-unmaximize-enabled", True),
-            self.backend.set_binding_enabled("notification-open-enabled", True),
-            self.backend.set_binding_enabled("notification-close-enabled", True),
-        )
-        if all(updates):
-            self._toast(
-                "Signature test applied. Trigger a notification or open, close, minimize, and restore a normal window."
-            )
-        else:
-            self._toast("Could not apply the full test preset")
-        self.refresh()
 
     def _on_open_logs_clicked(self, _button: Gtk.Button):
         try:
@@ -1209,29 +1142,35 @@ class AnimationSection(_ScrollPreservingSection):
             self._toast("Could not update animation preset")
         self.refresh()
 
+    def _on_binding_row_expanded(self, row: Adw.ExpanderRow, _pspec, binding_id: str):
+        if row.get_expanded():
+            self._expanded_bindings.add(binding_id)
+        else:
+            self._expanded_bindings.discard(binding_id)
+
     def _on_binding_duration_changed(self, spin: Gtk.SpinButton, duration_key: str):
         if not self._prepare_runtime("update animation timing"):
-            self.refresh()
+            GLib.idle_add(self.refresh)
             return
         if not self.backend.set_binding_duration(duration_key, int(round(spin.get_value()))):
             self._toast("Could not update animation duration")
-        self.refresh()
+        GLib.idle_add(self.refresh)
 
     def _on_binding_delay_changed(self, spin: Gtk.SpinButton, delay_key: str):
         if not self._prepare_runtime("update animation timing"):
-            self.refresh()
+            GLib.idle_add(self.refresh)
             return
         if not self.backend.set_binding_delay(delay_key, int(round(spin.get_value()))):
             self._toast("Could not update animation delay")
-        self.refresh()
+        GLib.idle_add(self.refresh)
 
     def _on_binding_intensity_changed(self, spin: Gtk.SpinButton, intensity_key: str):
         if not self._prepare_runtime("update animation intensity"):
-            self.refresh()
+            GLib.idle_add(self.refresh)
             return
         if not self.backend.set_binding_intensity(intensity_key, float(spin.get_value())):
             self._toast("Could not update animation intensity")
-        self.refresh()
+        GLib.idle_add(self.refresh)
 
     def _on_runtime_flag_changed(
         self,

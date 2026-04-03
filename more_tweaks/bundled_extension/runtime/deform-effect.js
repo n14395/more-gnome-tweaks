@@ -167,7 +167,8 @@ export class DeformEffect extends BaseEffect {
         }
 
         this._runPhases(actor, direction.phases, ctx, config.duration, config.delay, () => {
-            resetActor(actor);
+            if (!config.skipFinalReset)
+                resetActor(actor);
             config.onComplete?.();
         });
     }

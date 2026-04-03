@@ -97,7 +97,8 @@ export class TransformEffect extends BaseEffect {
             config.duration,
             config.delay,
             () => {
-                resetActor(actor);
+                if (!config.skipFinalReset)
+                    resetActor(actor);
                 config.onComplete?.();
             },
         );

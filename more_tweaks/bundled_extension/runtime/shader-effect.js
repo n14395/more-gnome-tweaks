@@ -35,7 +35,8 @@ export class ShaderPulseEffect extends BaseEffect {
                     duration: Math.max(1, Math.round(duration * 0.3)),
                     mode: Clutter.AnimationMode.EASE_OUT_QUAD,
                     onComplete: () => {
-                        resetActor(actor);
+                        if (!config.skipFinalReset)
+                            resetActor(actor);
                         config.onComplete?.();
                     },
                 }),
@@ -51,7 +52,8 @@ export class ShaderPulseEffect extends BaseEffect {
             delay: config.delay,
             mode: Clutter.AnimationMode.EASE_IN_CUBIC,
             onComplete: () => {
-                resetActor(actor);
+                if (!config.skipFinalReset)
+                    resetActor(actor);
                 config.onComplete?.();
             },
         });

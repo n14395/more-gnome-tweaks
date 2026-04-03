@@ -14,8 +14,6 @@ import {OsdWindow} from 'resource:///org/gnome/shell/ui/osdWindow.js';
 
 import {
     PRESETS,
-    PROFILE_NAMES,
-    PROFILES,
     getAnimationConfig,
     getNotificationBinding,
     getWindowBinding,
@@ -41,6 +39,7 @@ export class AnimationController {
         this._lastFocusedWindow = null;
         this._sizeChangeState = new WeakMap();
         this._closingActors = new WeakSet();
+        this._lifecycleActors = new WeakSet();
         this._animationWatchdogs = new Map();
         this._activeGrab = null;
         this._origShouldAnimateActor = null;
@@ -58,7 +57,6 @@ export class AnimationController {
 
     enable(capabilities = {}) {
         loadCustomPresets();
-        this._syncProfileLabel();
 
         try {
             this._installWindowHooks();
@@ -177,12 +175,6 @@ export class AnimationController {
         logDebug(this._settings, 'animation controller disabled');
     }
 
-    _syncProfileLabel() {
-        const profileName = this._settings.get_string('active-profile');
-        if (!PROFILE_NAMES.includes(profileName))
-            this._settings.set_string('active-profile', 'Balanced');
-    }
-
     _installWindowHooks() {
         if (!Main.wm?._shouldAnimateActor || !Main.wm?._shellwm?.completed_minimize)
             throw new Error('WindowManager animation hooks not found');
@@ -205,21 +197,30 @@ export class AnimationController {
                 return false;
 
             if (action && controller._shouldHandleWindow(actor, action)) {
-                if (action === 'close')
+                if (action === 'close') {
                     controller._closingActors.add(actor);
+                    controller._lifecycleActors.add(actor);
+                }
                 const originalEase = actor.ease;
                 actor.ease = function(...params) {
                     actor.ease = originalEase;
                     controller._runWindowAnimation(actor, action, () => {
-                        if (action === 'open')
+                        if (action === 'open') {
+                            resetActor(actor);
                             Main.wm._mapWindowDone(global.window_manager, actor);
-                        else
+                        } else {
+                            actor.hide();
                             Main.wm._destroyWindowDone(global.window_manager, actor);
-                        if (action === 'close')
+                        }
+                        if (action === 'close') {
                             controller._closingActors.delete(actor);
+                            controller._lifecycleActors.delete(actor);
+                        }
                     }, () => {
-                        if (action === 'close')
+                        if (action === 'close') {
                             controller._closingActors.delete(actor);
+                            controller._lifecycleActors.delete(actor);
+                        }
                         originalEase.apply(this, params);
                     });
                 };
@@ -242,10 +243,16 @@ export class AnimationController {
                 return;
             }
 
+            this._lifecycleActors.add(actor);
             this._runWindowAnimation(actor, 'minimize', () => {
+                this._lifecycleActors.delete(actor);
                 actor.hide();
                 this._origCompletedMinimize.call(Main.wm._shellwm, actor);
-            }, () => this._origCompletedMinimize.call(Main.wm._shellwm, actor));
+            }, () => {
+                this._lifecycleActors.delete(actor);
+                actor.hide();
+                this._origCompletedMinimize.call(Main.wm._shellwm, actor);
+            });
         }));
 
         this._windowSignals.push(global.window_manager.connect('unminimize', (_wm, actor) => {
@@ -255,9 +262,14 @@ export class AnimationController {
                 return;
             }
 
+            this._lifecycleActors.add(actor);
             this._runWindowAnimation(actor, 'unminimize', () => {
+                this._lifecycleActors.delete(actor);
                 this._origCompletedUnminimize.call(Main.wm._shellwm, actor);
-            }, () => this._origCompletedUnminimize.call(Main.wm._shellwm, actor));
+            }, () => {
+                this._lifecycleActors.delete(actor);
+                this._origCompletedUnminimize.call(Main.wm._shellwm, actor);
+            });
         }));
 
         this._windowSignals.push(global.window_manager.connect('size-change', (_wm, actor, op, oldFrameRect) => {
@@ -392,6 +404,7 @@ export class AnimationController {
     }
 
     _runWindowAnimation(actor, action, onComplete, fallback) {
+        const isOutgoing = action === 'close' || action === 'minimize';
         const appOverride = this._getPerAppOverride(actor?.meta_window, action);
         if (appOverride) {
             if (appOverride.enabled === false) {
@@ -403,6 +416,7 @@ export class AnimationController {
             const preset = PRESETS[presetName] ?? PRESETS[binding.defaultPreset] ?? PRESETS['Glide In'];
             const config = {
                 ...preset,
+                skipFinalReset: isOutgoing,
                 duration: appOverride.duration_ms ?? this._settings.get_int(binding.durationKey),
                 delay: appOverride.delay_ms ?? this._settings.get_int(binding.delayKey),
                 intensity: appOverride.intensity ?? this._settings.get_double(binding.intensityKey),
@@ -426,6 +440,7 @@ export class AnimationController {
         }
 
         const config = getAnimationConfig(this._settings, binding);
+        config.skipFinalReset = isOutgoing;
         config.onComplete = this._withAnimationWatchdog(actor, config, onComplete);
         logDebug(this._settings, `${binding.target} ${action} -> ${config.presetName}`);
         try {
@@ -438,10 +453,12 @@ export class AnimationController {
     }
 
     _runTransientAnimation(actor, action) {
+        if (!actor || this._lifecycleActors.has(actor))
+            return;
         if (!this._shouldHandleWindow(actor, action))
             return;
 
-        this._runWindowAnimation(actor, action, () => {}, () => {});
+        this._runWindowAnimation(actor, action, () => { resetActor(actor); }, () => { resetActor(actor); });
     }
 
     _updateShowingNotification(currentMonitorIndex = global.display.get_current_monitor()) {
@@ -536,7 +553,8 @@ export class AnimationController {
         const sourceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, timeoutMs, () => {
             logDebug(this._settings, `animation watchdog completed ${config.presetName}`);
             try {
-                resetActor(actor);
+                if (!config.skipFinalReset)
+                    resetActor(actor);
             } catch (_error) {
             }
             finish();
@@ -694,24 +712,6 @@ export class AnimationController {
         this._systemTimingPatches = [];
     }
 
-    applyProfile(profileName) {
-        const profile = PROFILES[profileName];
-        if (!profile)
-            return false;
-
-        this._settings.set_string('active-profile', profileName);
-        for (const [key, value] of Object.entries(profile)) {
-            if (typeof value === 'boolean')
-                this._settings.set_boolean(key, value);
-            else if (typeof value === 'number' && Number.isInteger(value))
-                this._settings.set_int(key, value);
-            else if (typeof value === 'number')
-                this._settings.set_double(key, value);
-            else
-                this._settings.set_string(key, `${value}`);
-        }
-        return true;
-    }
 }
 
 
