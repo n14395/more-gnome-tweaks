@@ -99,3 +99,45 @@ class TestPreferences:
             prefs = Preferences()
             assert prefs.hide_unavailable is False
             assert prefs.startup_category == "last"
+
+    def test_partial_preferences_file(self, tmp_prefs):
+        _, prefs_file = tmp_prefs
+        prefs_file.parent.mkdir(parents=True, exist_ok=True)
+        prefs_file.write_text(json.dumps({"hide_unavailable": True}))
+        with (
+            patch("more_tweaks.preferences._CONFIG_DIR", prefs_file.parent),
+            patch("more_tweaks.preferences._PREFS_FILE", prefs_file),
+        ):
+            from more_tweaks.preferences import Preferences
+            prefs = Preferences()
+            assert prefs.hide_unavailable is True
+            # Missing keys should use defaults
+            assert prefs.show_command_hints is True
+            assert prefs.confirm_individual_reset is False
+            assert prefs.default_export_dir == ""
+            assert prefs.startup_category == "last"
+
+    def test_unknown_keys_ignored_on_load(self, tmp_prefs):
+        _, prefs_file = tmp_prefs
+        prefs_file.parent.mkdir(parents=True, exist_ok=True)
+        prefs_file.write_text(json.dumps({
+            "hide_unavailable": True,
+            "unknown_future_key": "some_value",
+            "another_unknown": 42,
+        }))
+        with (
+            patch("more_tweaks.preferences._CONFIG_DIR", prefs_file.parent),
+            patch("more_tweaks.preferences._PREFS_FILE", prefs_file),
+        ):
+            from more_tweaks.preferences import Preferences
+            prefs = Preferences()
+            assert prefs.hide_unavailable is True
+            # Unknown keys don't crash, known defaults still work
+            assert prefs.show_command_hints is True
+
+    def test_get_preferences_singleton(self):
+        with patch("more_tweaks.preferences._instance", None):
+            from more_tweaks.preferences import get_preferences
+            p1 = get_preferences()
+            p2 = get_preferences()
+            assert p1 is p2

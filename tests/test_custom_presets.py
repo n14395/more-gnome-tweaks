@@ -172,6 +172,59 @@ class TestCustomPresetStore:
         assert store.name_is_available("   ") is False
 
 
+    def test_create_rename_edit_delete_lifecycle(self, tmp_presets_dir):
+        store, _ = tmp_presets_dir
+        data = {"family": "Custom", "setup": {"opacity": 0}, "phases": [{"opacity": 255}]}
+        assert store.create_preset("Lifecycle Test", data) is True
+        assert "Lifecycle Test" in store.preset_names()
+
+        assert store.rename_preset("Lifecycle Test", "Renamed Test") is True
+        assert "Lifecycle Test" not in store.preset_names()
+        assert "Renamed Test" in store.preset_names()
+
+        store.update_preset("Renamed Test", {"family": "Updated", "setup": {"opacity": 128}, "phases": []})
+        assert store.get_preset("Renamed Test")["family"] == "Updated"
+
+        store.delete_preset("Renamed Test")
+        assert store.get_preset("Renamed Test") is None
+
+    def test_clone_custom_preset(self, tmp_presets_dir):
+        store, _ = tmp_presets_dir
+        original = {"family": "Custom", "setup": {"opacity": 42}, "phases": [{"opacity": 255}]}
+        store.create_preset("Original", original)
+        # Clone the custom preset by getting its data and cloning
+        preset_data = store.get_preset("Original")
+        assert store.clone_preset("Original", "Cloned", preset_data) is True
+        cloned = store.get_preset("Cloned")
+        assert cloned is not None
+        assert cloned["based_on"] == "Original"
+        assert cloned["setup"]["opacity"] == 42
+
+
+class TestDefaultBlankPreset:
+    def test_structure(self):
+        from more_tweaks.custom_presets import DEFAULT_BLANK_PRESET
+        assert "family" in DEFAULT_BLANK_PRESET
+        assert "setup" in DEFAULT_BLANK_PRESET
+        assert "phases" in DEFAULT_BLANK_PRESET
+        setup = DEFAULT_BLANK_PRESET["setup"]
+        for key in ("opacity", "scaleX", "scaleY", "translationX", "translationY",
+                     "rotationZ", "rotationY", "pivotX", "pivotY"):
+            assert key in setup, f"DEFAULT_BLANK_PRESET setup missing {key!r}"
+        assert len(DEFAULT_BLANK_PRESET["phases"]) >= 1
+
+    def test_valid_values(self):
+        from more_tweaks.custom_presets import DEFAULT_BLANK_PRESET
+        setup = DEFAULT_BLANK_PRESET["setup"]
+        assert 0 <= setup["opacity"] <= 255
+        assert setup["scaleX"] > 0
+        assert setup["scaleY"] > 0
+        phase = DEFAULT_BLANK_PRESET["phases"][0]
+        assert phase["mode"] in ("EASE_OUT_CUBIC", "EASE_IN_CUBIC", "EASE_OUT_QUAD",
+                                  "EASE_IN_QUAD", "EASE_OUT_BOUNCE", "LINEAR")
+        assert phase.get("durationScale", 1.0) > 0
+
+
 class TestTransformPresetToDict:
     def test_round_trip(self, tmp_presets_dir):
         store, _ = tmp_presets_dir
