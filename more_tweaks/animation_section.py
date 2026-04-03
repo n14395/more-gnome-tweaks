@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import logging
 import subprocess
 import tempfile
@@ -15,8 +16,8 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402
 
 from .animation_preview import AnimationPreviewWidget  # noqa: E402
 from .animations import AnimationBackend, PROFILE_NAMES  # noqa: E402
-from .animation_catalog import PER_APP_ACTIONS  # noqa: E402
-from .custom_presets import CustomPresetStore  # noqa: E402
+from .animation_catalog import BINDING_DEFINITIONS, PER_APP_ACTIONS  # noqa: E402
+from .custom_presets import CustomPresetStore, DEFAULT_BLANK_PRESET  # noqa: E402
 from .preset_data import TRANSFORM_PRESETS  # noqa: E402
 from .timeline_widget import AnimationTimelineWidget  # noqa: E402
 from ._shared import (  # noqa: E402
@@ -116,6 +117,8 @@ class AnimationSection(_ScrollPreservingSection):
             return
 
         for group in self._build_controls_group():
+            self.append(group)
+        for group in self._build_custom_presets_group():
             self.append(group)
         for group in self._build_diagnostics_group():
             self.append(group)
@@ -252,6 +255,115 @@ class AnimationSection(_ScrollPreservingSection):
         group.add(experimental_row)
 
         return [group]
+
+    def _build_custom_presets_group(self) -> list[Adw.PreferencesGroup]:
+        """Group B2: Custom Presets -- create and manage custom animation presets."""
+        custom_names = self.custom_presets.preset_names()
+        if not custom_names:
+            group = Adw.PreferencesGroup(
+                title="Custom Presets",
+                description="Create your own animation presets from scratch or by cloning existing ones.",
+            )
+            group.set_margin_top(12)
+            group.set_margin_start(12)
+            group.set_margin_end(12)
+        else:
+            group = Adw.PreferencesGroup(
+                title="Custom Presets",
+                description=f"{len(custom_names)} custom preset{'s' if len(custom_names) != 1 else ''}.",
+            )
+            group.set_margin_top(12)
+            group.set_margin_start(12)
+            group.set_margin_end(12)
+
+            for name in custom_names:
+                data = self.custom_presets.get_preset(name) or {}
+                family = data.get("family", "Custom")
+                n_phases = len(data.get("phases", []))
+                row = Adw.ActionRow(title=name)
+                row.set_subtitle(f"{family} family, {n_phases} phase{'s' if n_phases != 1 else ''}")
+
+                btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+
+                edit_btn = Gtk.Button.new_from_icon_name("document-edit-symbolic")
+                edit_btn.set_valign(Gtk.Align.CENTER)
+                edit_btn.add_css_class("flat")
+                edit_btn.set_tooltip_text("Edit preset")
+                edit_btn.connect("clicked", lambda _b, n=name: self._show_preset_editor(n))
+                btn_box.append(edit_btn)
+
+                delete_btn = Gtk.Button.new_from_icon_name("user-trash-symbolic")
+                delete_btn.set_valign(Gtk.Align.CENTER)
+                delete_btn.add_css_class("flat")
+                delete_btn.set_tooltip_text("Delete preset")
+                delete_btn.connect("clicked", lambda _b, n=name: self._on_delete_custom_preset(n))
+                btn_box.append(delete_btn)
+
+                row.add_suffix(btn_box)
+                group.add(row)
+
+        create_row = Adw.ActionRow(title="Create new preset")
+        create_row.set_subtitle("Start with a blank fade-in animation")
+        create_btn = Gtk.Button.new_from_icon_name("list-add-symbolic")
+        create_btn.set_valign(Gtk.Align.CENTER)
+        create_btn.add_css_class("flat")
+        create_btn.set_tooltip_text("Create a new custom preset")
+        create_btn.connect("clicked", self._on_create_preset_clicked)
+        create_row.add_suffix(create_btn)
+        group.add(create_row)
+
+        return [group]
+
+    def _on_create_preset_clicked(self, _button):
+        name = "New Preset"
+        suffix = 1
+        while not self.custom_presets.name_is_available(name):
+            suffix += 1
+            name = f"New Preset {suffix}"
+        self.custom_presets.create_preset(name, copy.deepcopy(DEFAULT_BLANK_PRESET))
+        self.backend.bump_custom_presets_version()
+        self._toast(f"Created custom preset '{name}'")
+        self._show_preset_editor(name)
+
+    def _on_delete_custom_preset(self, preset_name: str):
+        self._update_bindings_after_delete(preset_name)
+        self.custom_presets.delete_preset(preset_name)
+        self.backend.bump_custom_presets_version()
+        self._toast(f"Deleted custom preset '{preset_name}'")
+        self.refresh()
+
+    def _update_bindings_after_rename(self, old_name: str, new_name: str):
+        for binding_def in BINDING_DEFINITIONS:
+            current = self.backend.get_binding_preset(
+                binding_def.preset_key, binding_def.default_preset)
+            if current == old_name:
+                self.backend.set_binding_preset(binding_def.preset_key, new_name)
+        overrides = self.backend.get_per_app_overrides()
+        changed = False
+        for entry in overrides:
+            for _action, rule in entry.get("rules", {}).items():
+                if rule.get("preset") == old_name:
+                    rule["preset"] = new_name
+                    changed = True
+        if changed:
+            self.backend.set_per_app_overrides(overrides)
+
+    def _update_bindings_after_delete(self, deleted_name: str):
+        for binding_def in BINDING_DEFINITIONS:
+            current = self.backend.get_binding_preset(
+                binding_def.preset_key, binding_def.default_preset)
+            if current == deleted_name:
+                self.backend.set_binding_preset(
+                    binding_def.preset_key, binding_def.default_preset)
+        overrides = self.backend.get_per_app_overrides()
+        changed = False
+        for entry in overrides:
+            for _action, rule in entry.get("rules", {}).items():
+                if rule.get("preset") == deleted_name:
+                    rule["preset"] = "Glide In"
+                    changed = True
+        if changed:
+            self.backend.set_per_app_overrides(overrides)
 
     def _build_diagnostics_group(self) -> list[Adw.PreferencesGroup]:
         """Group C: Diagnostics -- informational rows and maintenance actions."""
@@ -722,6 +834,8 @@ class AnimationSection(_ScrollPreservingSection):
         preset_name = binding.preset_name
         preset = TRANSFORM_PRESETS.get(preset_name)
         if preset is None:
+            preset = self.custom_presets.to_transform_preset(preset_name)
+        if preset is None:
             self._toast(f"'{preset_name}' uses a runtime-only effect and cannot be previewed")
             return
         popover = Gtk.Popover()
@@ -736,6 +850,8 @@ class AnimationSection(_ScrollPreservingSection):
     def _on_clone_preset_clicked(self, _button, binding):
         preset_name = binding.preset_name
         preset = TRANSFORM_PRESETS.get(preset_name)
+        if preset is None:
+            preset = self.custom_presets.to_transform_preset(preset_name)
         if preset is None:
             self._toast(f"'{preset_name}' is a runtime-only effect and cannot be cloned")
             return
@@ -754,9 +870,9 @@ class AnimationSection(_ScrollPreservingSection):
         if data is None:
             return
 
-        dialog = Adw.Dialog(title=f"Edit: {preset_name}")
+        dialog = Adw.Dialog(title="Edit Preset")
         dialog.set_content_width(480)
-        dialog.set_content_height(600)
+        dialog.set_content_height(640)
 
         toolbar = Adw.ToolbarView()
         header = Adw.HeaderBar()
@@ -768,6 +884,13 @@ class AnimationSection(_ScrollPreservingSection):
         box.set_margin_bottom(12)
         box.set_margin_start(12)
         box.set_margin_end(12)
+
+        # Name entry
+        name_group = Adw.PreferencesGroup()
+        name_entry = Adw.EntryRow(title="Preset Name")
+        name_entry.set_text(preset_name)
+        name_group.add(name_entry)
+        box.append(name_group)
 
         # Setup state group
         setup_group = Adw.PreferencesGroup(title="Setup State", description="Initial transform before animation begins.")
@@ -781,6 +904,7 @@ class AnimationSection(_ScrollPreservingSection):
             ("translationX", "Translation X", -200.0, 200.0, 1.0, setup.get("translationX", 0.0)),
             ("translationY", "Translation Y", -200.0, 200.0, 1.0, setup.get("translationY", 0.0)),
             ("rotationZ", "Rotation Z", -180.0, 180.0, 0.5, setup.get("rotationZ", 0.0)),
+            ("rotationY", "Rotation Y", -180.0, 180.0, 0.5, setup.get("rotationY", 0.0)),
             ("pivotX", "Pivot X", 0.0, 1.0, 0.1, setup.get("pivotX", 0.5)),
             ("pivotY", "Pivot Y", 0.0, 1.0, 0.1, setup.get("pivotY", 0.5)),
         ]
@@ -797,62 +921,18 @@ class AnimationSection(_ScrollPreservingSection):
 
         box.append(setup_group)
 
-        # Phase groups
+        # Phase data and widgets (mutable lists for dynamic add/remove)
         easing_options = ["EASE_OUT_CUBIC", "EASE_IN_CUBIC", "EASE_OUT_QUAD", "EASE_IN_QUAD", "EASE_OUT_BOUNCE", "LINEAR"]
-        phase_widgets = []
-        phases = data.get("phases", [])
+        phase_data_list = [dict(p) for p in data.get("phases", [])]
+        phase_widgets: list[dict] = []
 
-        for i, phase in enumerate(phases):
-            phase_group = Adw.PreferencesGroup(title=f"Phase {i + 1}")
-            spins = {}
+        phase_defaults = {
+            "opacity": 255, "scaleX": 1.0, "scaleY": 1.0,
+            "translationX": 0.0, "translationY": 0.0, "rotationZ": 0.0,
+        }
 
-            phase_fields = [
-                ("opacity", "Opacity", 0, 255, 1),
-                ("scaleX", "Scale X", 0.0, 2.0, 0.01),
-                ("scaleY", "Scale Y", 0.0, 2.0, 0.01),
-                ("translationX", "Translation X", -200.0, 200.0, 1.0),
-                ("translationY", "Translation Y", -200.0, 200.0, 1.0),
-                ("rotationZ", "Rotation Z", -180.0, 180.0, 0.5),
-            ]
-            for key, label, lo, hi, step in phase_fields:
-                val = phase.get(key)
-                if val is None:
-                    continue
-                row = Adw.ActionRow(title=label)
-                spin = Gtk.SpinButton.new_with_range(lo, hi, step)
-                if isinstance(val, float) and step < 1:
-                    spin.set_digits(2)
-                spin.set_value(val)
-                spin.set_valign(Gtk.Align.CENTER)
-                row.add_suffix(spin)
-                phase_group.add(row)
-                spins[key] = spin
-
-            # Duration scale
-            ds_row = Adw.ActionRow(title="Duration Scale")
-            ds_spin = Gtk.SpinButton.new_with_range(0.05, 1.0, 0.01)
-            ds_spin.set_digits(2)
-            ds_spin.set_value(phase.get("durationScale", 1.0))
-            ds_spin.set_valign(Gtk.Align.CENTER)
-            ds_row.add_suffix(ds_spin)
-            phase_group.add(ds_row)
-            spins["durationScale"] = ds_spin
-
-            # Easing mode
-            easing_row = Adw.ActionRow(title="Easing")
-            easing_dd = Gtk.DropDown.new_from_strings(easing_options)
-            easing_dd.set_valign(Gtk.Align.CENTER)
-            current_mode = phase.get("mode", "EASE_OUT_CUBIC")
-            try:
-                easing_dd.set_selected(easing_options.index(current_mode))
-            except ValueError:
-                easing_dd.set_selected(0)
-            easing_row.add_suffix(easing_dd)
-            phase_group.add(easing_row)
-            spins["_easing_dd"] = easing_dd
-
-            box.append(phase_group)
-            phase_widgets.append(spins)
+        phases_container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        box.append(phases_container)
 
         # Preview
         preview = AnimationPreviewWidget()
@@ -871,21 +951,158 @@ class AnimationSection(_ScrollPreservingSection):
         btn_box.append(save_btn)
         box.append(btn_box)
 
+        # --- Name validation ---
+        def _on_name_changed(_entry):
+            text = name_entry.get_text().strip()
+            valid = self.custom_presets.name_is_available(text, exclude=preset_name)
+            if valid:
+                name_entry.remove_css_class("error")
+                save_btn.set_sensitive(True)
+            else:
+                name_entry.add_css_class("error")
+                save_btn.set_sensitive(False)
+
+        name_entry.connect("changed", _on_name_changed)
+
+        # --- Phase rebuild ---
+        def _snapshot_phases():
+            """Capture current widget values back into phase_data_list before rebuild."""
+            for i, pw in enumerate(phase_widgets):
+                if i >= len(phase_data_list):
+                    break
+                for key, widget in pw.items():
+                    if key == "_easing_dd":
+                        sel = widget.get_selected()
+                        phase_data_list[i]["mode"] = easing_options[sel] if sel < len(easing_options) else "EASE_OUT_CUBIC"
+                    elif key == "opacity":
+                        phase_data_list[i][key] = int(widget.get_value())
+                    else:
+                        phase_data_list[i][key] = widget.get_value()
+
+        def _rebuild_phases():
+            phase_widgets.clear()
+            child = phases_container.get_first_child()
+            while child is not None:
+                next_child = child.get_next_sibling()
+                phases_container.remove(child)
+                child = next_child
+
+            phase_fields = [
+                ("opacity", "Opacity", 0, 255, 1),
+                ("scaleX", "Scale X", 0.0, 2.0, 0.01),
+                ("scaleY", "Scale Y", 0.0, 2.0, 0.01),
+                ("translationX", "Translation X", -200.0, 200.0, 1.0),
+                ("translationY", "Translation Y", -200.0, 200.0, 1.0),
+                ("rotationZ", "Rotation Z", -180.0, 180.0, 0.5),
+            ]
+
+            for i, phase in enumerate(phase_data_list):
+                phase_group = Adw.PreferencesGroup(title=f"Phase {i + 1}")
+                spins = {}
+
+                # Fill defaults for missing properties
+                for key, default_val in phase_defaults.items():
+                    if key not in phase:
+                        phase[key] = default_val
+
+                for key, label, lo, hi, step in phase_fields:
+                    val = phase.get(key, phase_defaults.get(key, 0))
+                    row = Adw.ActionRow(title=label)
+                    spin = Gtk.SpinButton.new_with_range(lo, hi, step)
+                    if isinstance(val, float) and step < 1:
+                        spin.set_digits(2)
+                    spin.set_value(val)
+                    spin.set_valign(Gtk.Align.CENTER)
+                    row.add_suffix(spin)
+                    phase_group.add(row)
+                    spins[key] = spin
+
+                # Duration scale
+                ds_row = Adw.ActionRow(title="Duration Scale")
+                ds_spin = Gtk.SpinButton.new_with_range(0.05, 2.0, 0.01)
+                ds_spin.set_digits(2)
+                ds_spin.set_value(phase.get("durationScale", 1.0))
+                ds_spin.set_valign(Gtk.Align.CENTER)
+                ds_row.add_suffix(ds_spin)
+                phase_group.add(ds_row)
+                spins["durationScale"] = ds_spin
+
+                # Easing mode
+                easing_row = Adw.ActionRow(title="Easing")
+                easing_dd = Gtk.DropDown.new_from_strings(easing_options)
+                easing_dd.set_valign(Gtk.Align.CENTER)
+                current_mode = phase.get("mode", "EASE_OUT_CUBIC")
+                try:
+                    easing_dd.set_selected(easing_options.index(current_mode))
+                except ValueError:
+                    easing_dd.set_selected(0)
+                easing_row.add_suffix(easing_dd)
+                phase_group.add(easing_row)
+                spins["_easing_dd"] = easing_dd
+
+                # Remove phase button
+                remove_row = Adw.ActionRow(title="Remove this phase")
+                remove_btn = Gtk.Button.new_from_icon_name("user-trash-symbolic")
+                remove_btn.set_valign(Gtk.Align.CENTER)
+                remove_btn.add_css_class("flat")
+                remove_btn.add_css_class("destructive-action")
+                remove_btn.set_sensitive(len(phase_data_list) > 1)
+                remove_btn.connect("clicked", lambda _b, idx=i: _remove_phase(idx))
+                remove_row.add_suffix(remove_btn)
+                phase_group.add(remove_row)
+
+                phases_container.append(phase_group)
+                phase_widgets.append(spins)
+
+            # Add Phase button
+            add_btn = Gtk.Button(label="Add Phase")
+            add_btn.set_halign(Gtk.Align.START)
+            add_btn.add_css_class("pill")
+            add_btn.connect("clicked", lambda _b: _add_phase())
+            phases_container.append(add_btn)
+
+            # Reconnect preview signals
+            for pw in phase_widgets:
+                for key, widget in pw.items():
+                    if key == "_easing_dd":
+                        widget.connect("notify::selected", _on_preview_update)
+                    else:
+                        widget.connect("value-changed", _on_preview_update)
+
+        def _add_phase():
+            _snapshot_phases()
+            phase_data_list.append({
+                "opacity": 255, "scaleX": 1.0, "scaleY": 1.0,
+                "translationX": 0.0, "translationY": 0.0, "rotationZ": 0.0,
+                "mode": "EASE_OUT_CUBIC", "durationScale": 0.5,
+            })
+            _rebuild_phases()
+            _on_preview_update()
+
+        def _remove_phase(index):
+            _snapshot_phases()
+            if len(phase_data_list) > 1:
+                phase_data_list.pop(index)
+            _rebuild_phases()
+            _on_preview_update()
+
+        # --- Handlers ---
         def _on_save(_btn):
+            new_name = name_entry.get_text().strip()
+            if not self.custom_presets.name_is_available(new_name, exclude=preset_name):
+                self._toast("Invalid or conflicting preset name")
+                return
+
+            _snapshot_phases()
+
             new_setup = {}
             for key, spin in setup_spins.items():
                 new_setup[key] = spin.get_value()
             new_setup["opacity"] = int(new_setup["opacity"])
 
             new_phases = []
-            for pw in phase_widgets:
-                p = {}
-                for key, spin in pw.items():
-                    if key == "_easing_dd":
-                        sel = spin.get_selected()
-                        p["mode"] = easing_options[sel] if sel < len(easing_options) else "EASE_OUT_CUBIC"
-                    else:
-                        p[key] = spin.get_value()
+            for pd in phase_data_list:
+                p = dict(pd)
                 if "opacity" in p:
                     p["opacity"] = int(p["opacity"])
                 new_phases.append(p)
@@ -893,18 +1110,35 @@ class AnimationSection(_ScrollPreservingSection):
             new_data = {"family": data.get("family", "Custom"), "setup": new_setup, "phases": new_phases}
             if "based_on" in data:
                 new_data["based_on"] = data["based_on"]
-            self.custom_presets.update_preset(preset_name, new_data)
+
+            # Handle rename
+            final_name = preset_name
+            if new_name != preset_name:
+                if not self.custom_presets.rename_preset(preset_name, new_name):
+                    self._toast(f"Could not rename to '{new_name}'")
+                    return
+                self._update_bindings_after_rename(preset_name, new_name)
+                final_name = new_name
+
+            self.custom_presets.update_preset(final_name, new_data)
             self.backend.bump_custom_presets_version()
-            self._toast(f"Saved custom preset '{preset_name}'")
+            self._toast(f"Saved custom preset '{final_name}'")
             dialog.close()
             self.refresh()
 
         def _on_delete(_btn):
+            self._update_bindings_after_delete(preset_name)
             self.custom_presets.delete_preset(preset_name)
             self.backend.bump_custom_presets_version()
             self._toast(f"Deleted custom preset '{preset_name}'")
             dialog.close()
             self.refresh()
+
+        _CAMEL_TO_SNAKE = {
+            "scaleX": "scale_x", "scaleY": "scale_y",
+            "translationX": "translation_x", "translationY": "translation_y",
+            "rotationZ": "rotation_z",
+        }
 
         def _on_preview_update(*_args):
             from .preset_data import PresetPhase, PresetSetup, TransformPreset
@@ -916,6 +1150,7 @@ class AnimationSection(_ScrollPreservingSection):
                     translation_x=setup_spins["translationX"].get_value(),
                     translation_y=setup_spins["translationY"].get_value(),
                     rotation_z=setup_spins["rotationZ"].get_value(),
+                    rotation_y=setup_spins["rotationY"].get_value(),
                     pivot_x=setup_spins["pivotX"].get_value(),
                     pivot_y=setup_spins["pivotY"].get_value(),
                 )
@@ -931,9 +1166,7 @@ class AnimationSection(_ScrollPreservingSection):
                         elif key == "durationScale":
                             p_kwargs["duration_scale"] = spin.get_value()
                         else:
-                            p_kwargs[{"scaleX": "scale_x", "scaleY": "scale_y",
-                                       "translationX": "translation_x", "translationY": "translation_y",
-                                       "rotationZ": "rotation_z"}.get(key, key)] = spin.get_value()
+                            p_kwargs[_CAMEL_TO_SNAKE.get(key, key)] = spin.get_value()
                     cur_phases.append(PresetPhase(**p_kwargs))
                 tp = TransformPreset(
                     family=data.get("family", "Custom"),
@@ -944,15 +1177,12 @@ class AnimationSection(_ScrollPreservingSection):
             except Exception:
                 _log.debug("Preview update failed for preset %r", preset_name, exc_info=True)
 
-        # Connect all spin buttons and dropdowns to live preview
+        # Connect setup spins to live preview
         for spin in setup_spins.values():
             spin.connect("value-changed", _on_preview_update)
-        for pw in phase_widgets:
-            for key, widget in pw.items():
-                if key == "_easing_dd":
-                    widget.connect("notify::selected", _on_preview_update)
-                else:
-                    widget.connect("value-changed", _on_preview_update)
+
+        # Build initial phases
+        _rebuild_phases()
 
         save_btn.connect("clicked", _on_save)
         delete_btn.connect("clicked", _on_delete)

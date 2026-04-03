@@ -526,6 +526,9 @@ class AnimationBackend:
             self.restart_runtime()
         return success
 
+    def get_binding_preset(self, preset_key: str, default: str = "") -> str:
+        return self._get_string(preset_key, default)
+
     def set_binding_duration(self, duration_key: str, value: int) -> bool:
         success = self._set_int(duration_key, value)
         if success:

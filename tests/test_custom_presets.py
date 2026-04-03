@@ -108,6 +108,70 @@ class TestCustomPresetStore:
         assert store.to_transform_preset("nonexistent") is None
 
 
+    def test_create_preset(self, tmp_presets_dir):
+        store, _ = tmp_presets_dir
+        data = {"family": "Custom", "setup": {"opacity": 0}, "phases": [{"opacity": 255}]}
+        assert store.create_preset("My New Preset", data) is True
+        assert "My New Preset" in store.list_presets()
+        assert store.get_preset("My New Preset")["family"] == "Custom"
+
+    def test_create_preset_rejects_empty_name(self, tmp_presets_dir):
+        store, _ = tmp_presets_dir
+        data = {"family": "Custom", "setup": {}, "phases": []}
+        assert store.create_preset("", data) is False
+        assert store.create_preset("   ", data) is False
+
+    def test_create_preset_rejects_builtin_name(self, tmp_presets_dir):
+        store, _ = tmp_presets_dir
+        data = {"family": "Custom", "setup": {}, "phases": []}
+        assert store.create_preset("Glide In", data) is False
+
+    def test_create_preset_rejects_duplicate(self, tmp_presets_dir):
+        store, _ = tmp_presets_dir
+        data = {"family": "Custom", "setup": {}, "phases": []}
+        store.create_preset("My Preset", data)
+        assert store.create_preset("My Preset", data) is False
+
+    def test_rename_preset(self, tmp_presets_dir):
+        store, _ = tmp_presets_dir
+        data = {"family": "Custom", "setup": {"opacity": 42}, "phases": []}
+        store.create_preset("Old Name", data)
+        assert store.rename_preset("Old Name", "New Name") is True
+        assert store.get_preset("Old Name") is None
+        assert store.get_preset("New Name") is not None
+        assert store.get_preset("New Name")["setup"]["opacity"] == 42
+
+    def test_rename_preset_noop(self, tmp_presets_dir):
+        store, _ = tmp_presets_dir
+        data = {"family": "Custom", "setup": {}, "phases": []}
+        store.create_preset("Same Name", data)
+        assert store.rename_preset("Same Name", "Same Name") is True
+        assert "Same Name" in store.preset_names()
+
+    def test_rename_preset_rejects_nonexistent(self, tmp_presets_dir):
+        store, _ = tmp_presets_dir
+        assert store.rename_preset("Does Not Exist", "New") is False
+
+    def test_rename_preset_rejects_conflict(self, tmp_presets_dir):
+        store, _ = tmp_presets_dir
+        data = {"family": "Custom", "setup": {}, "phases": []}
+        store.create_preset("Preset A", data)
+        store.create_preset("Preset B", data)
+        assert store.rename_preset("Preset A", "Preset B") is False
+        assert store.rename_preset("Preset A", "Glide In") is False
+
+    def test_name_is_available(self, tmp_presets_dir):
+        store, _ = tmp_presets_dir
+        data = {"family": "Custom", "setup": {}, "phases": []}
+        store.create_preset("Taken", data)
+        assert store.name_is_available("Free Name") is True
+        assert store.name_is_available("Taken") is False
+        assert store.name_is_available("Taken", exclude="Taken") is True
+        assert store.name_is_available("Glide In") is False
+        assert store.name_is_available("") is False
+        assert store.name_is_available("   ") is False
+
+
 class TestTransformPresetToDict:
     def test_round_trip(self, tmp_presets_dir):
         store, _ = tmp_presets_dir

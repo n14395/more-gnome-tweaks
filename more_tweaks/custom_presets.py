@@ -15,6 +15,20 @@ _REAL_HOME = Path(pwd.getpwuid(os.getuid()).pw_dir)
 CUSTOM_PRESETS_DIR = _REAL_HOME / ".config" / "more-tweaks"
 CUSTOM_PRESETS_FILE = CUSTOM_PRESETS_DIR / "custom-presets.json"
 
+DEFAULT_BLANK_PRESET: dict = {
+    "family": "Custom",
+    "setup": {
+        "opacity": 0, "scaleX": 1.0, "scaleY": 1.0,
+        "translationX": 0.0, "translationY": 0.0,
+        "rotationZ": 0.0, "rotationY": 0.0,
+        "pivotX": 0.5, "pivotY": 0.5,
+    },
+    "phases": [
+        {"opacity": 255, "scaleX": 1.0, "scaleY": 1.0,
+         "mode": "EASE_OUT_CUBIC", "durationScale": 1.0},
+    ],
+}
+
 
 class CustomPresetStore:
     """Read/write custom presets to ~/.config/more-tweaks/custom-presets.json."""
@@ -45,6 +59,42 @@ class CustomPresetStore:
             return False
         self._presets[new_name] = {**preset_data, "based_on": source_name}
         self.save()
+        return True
+
+    def create_preset(self, name: str, preset_data: dict) -> bool:
+        from .preset_data import TRANSFORM_PRESETS
+        if not name.strip():
+            return False
+        if name in TRANSFORM_PRESETS or name in self._presets:
+            return False
+        self._presets[name] = preset_data
+        self.save()
+        return True
+
+    def rename_preset(self, old_name: str, new_name: str) -> bool:
+        from .preset_data import TRANSFORM_PRESETS
+        if old_name not in self._presets:
+            return False
+        if not new_name.strip():
+            return False
+        if old_name == new_name:
+            return True
+        if new_name in TRANSFORM_PRESETS or new_name in self._presets:
+            return False
+        data = self._presets.pop(old_name)
+        self._presets[new_name] = data
+        self.save()
+        return True
+
+    def name_is_available(self, name: str, exclude: str | None = None) -> bool:
+        """Check if a name is valid and not taken (optionally excluding one existing name)."""
+        from .preset_data import TRANSFORM_PRESETS
+        if not name.strip():
+            return False
+        if name in TRANSFORM_PRESETS:
+            return False
+        if name in self._presets and name != exclude:
+            return False
         return True
 
     def update_preset(self, name: str, preset_data: dict):
