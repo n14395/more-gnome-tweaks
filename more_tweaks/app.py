@@ -11,6 +11,7 @@ gi.require_version("Gtk", "4.0")
 
 from gi.repository import Adw, Gio, Gtk
 
+from .preferences import PreferencesDialog, get_preferences
 from .window import MoreTweaksWindow
 
 
@@ -74,6 +75,12 @@ class MoreTweaksApplication(Adw.Application):
         reset_all_action.connect("activate", self._on_reset_all)
         self.add_action(reset_all_action)
 
+        # Preferences dialog
+        prefs_action = Gio.SimpleAction.new("preferences", None)
+        prefs_action.connect("activate", self._on_preferences)
+        self.add_action(prefs_action)
+        self.set_accels_for_action("app.preferences", ["<Control>comma"])
+
         # Ctrl+Shift+F → toggle sidebar
         sidebar_action = Gio.SimpleAction.new("toggle-sidebar", None)
         sidebar_action.connect("activate", self._on_toggle_sidebar)
@@ -124,6 +131,16 @@ class MoreTweaksApplication(Adw.Application):
         if window is not None and hasattr(window, "reset_all_settings"):
             window.reset_all_settings()
 
+    def _on_preferences(self, _action, _param):
+        from .data import CATEGORIES
+        prefs = get_preferences()
+        dialog = PreferencesDialog(
+            prefs,
+            categories=list(CATEGORIES),
+            transient_for=self.props.active_window,
+        )
+        dialog.present()
+
     def _on_toggle_sidebar(self, _action, _param):
         window = self.props.active_window
         if window is not None and hasattr(window, "toggle_sidebar"):
@@ -162,6 +179,12 @@ _SHORTCUTS_UI = """<?xml version="1.0" encoding="UTF-8"?>
               <object class="GtkShortcutsShortcut">
                 <property name="title">Toggle sidebar</property>
                 <property name="accelerator">&lt;Control&gt;&lt;Shift&gt;f</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkShortcutsShortcut">
+                <property name="title">Preferences</property>
+                <property name="accelerator">&lt;Control&gt;comma</property>
               </object>
             </child>
             <child>

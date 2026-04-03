@@ -12,8 +12,9 @@ gi.require_version("Gdk", "4.0")
 
 from gi.repository import Adw, Gdk, Gio, GLib, GObject, Gtk, Pango
 
-from .settings_backend import SettingsBackend, _unit_for_key, _list_installed_themes
 from .models import Tweak
+from .preferences import get_preferences
+from .settings_backend import SettingsBackend, _unit_for_key, _list_installed_themes
 
 _log = logging.getLogger("more_tweaks.tweak_row")
 
@@ -245,7 +246,7 @@ class TweakRow(Adw.ActionRow):
             self.add_suffix(control)
 
         # Copy command_hint button
-        if tweak.command_hint is not None:
+        if tweak.command_hint is not None and get_preferences().show_command_hints:
             copy_button = Gtk.Button(icon_name="edit-copy-symbolic")
             copy_button.add_css_class("flat")
             copy_button.set_valign(Gtk.Align.CENTER)
@@ -515,8 +516,25 @@ class TweakRow(Adw.ActionRow):
             self._updating = False
 
     def _on_reset_clicked(self, _button: Gtk.Button):
+        if get_preferences().confirm_individual_reset:
+            dialog = Adw.AlertDialog()
+            dialog.set_heading("Reset to Default?")
+            dialog.set_body(f"Reset \u201c{self.tweak.name}\u201d to its default value?")
+            dialog.add_response("cancel", "Cancel")
+            dialog.add_response("reset", "Reset")
+            dialog.set_response_appearance("reset", Adw.ResponseAppearance.DESTRUCTIVE)
+            dialog.set_default_response("cancel")
+            dialog.set_close_response("cancel")
+            dialog.connect("response", self._on_reset_confirmed)
+            dialog.present(self.get_root())
+            return
         self.backend.reset(self.tweak)
         self.refresh()
+
+    def _on_reset_confirmed(self, _dialog, response):
+        if response == "reset":
+            self.backend.reset(self.tweak)
+            self.refresh()
 
     def _on_copy_command_clicked(self, _button: Gtk.Button):
         if self.tweak.command_hint is not None:

@@ -19,6 +19,7 @@ from gi.repository import Adw, Gio, GLib, Gtk
 from .animation_section import AnimationSection
 from .data import CATEGORIES, CHILD_CATEGORIES, TWEAKS, filter_tweaks
 from .models import Category, Tweak
+from .preferences import get_preferences
 from .settings_backend import SettingsBackend
 from .tiling_section import TilingSection
 from .topbar_section import TopBarSection
@@ -57,11 +58,17 @@ class MoreTweaksWindow(Adw.ApplicationWindow):
             state.get("height", 640),
         )
 
-        saved_category = state.get("category", CATEGORIES[0].id)
+        prefs = get_preferences()
+        startup_pref = prefs.startup_category
+        if startup_pref == "last":
+            saved_category = state.get("category", CATEGORIES[0].id)
+        else:
+            saved_category = startup_pref
         self.selected_category: str = CATEGORIES[0].id
         self.categories_by_id = {category.id: category for category in CATEGORIES}
         self.backend = SettingsBackend()
         self.backend.connect_change_callback(self._on_external_change)
+        prefs.connect_changed(self._on_preference_changed)
         self.rendered_rows: list[TweakRow | TextListRow] = []
 
         self.toast_overlay = Adw.ToastOverlay()
@@ -70,6 +77,7 @@ class MoreTweaksWindow(Adw.ApplicationWindow):
 
         # Primary menu (hamburger menu)
         menu = Gio.Menu()
+        menu.append("Preferences", "app.preferences")
         menu.append("Reset All Settings", "app.reset-all")
         menu.append("Keyboard Shortcuts", "app.shortcuts")
         menu.append("About More Tweaks", "app.about")
@@ -318,6 +326,10 @@ class MoreTweaksWindow(Adw.ApplicationWindow):
             if row.tweak.schema == schema and row.tweak.key == key:
                 row.refresh()
 
+    def _on_preference_changed(self, key: str):
+        if key in ("hide_unavailable", "show_command_hints"):
+            self.refresh_rows()
+
     def _on_search_stopped(self, _entry: Gtk.SearchEntry):
         self.search_entry.set_text("")
         self.category_list.grab_focus()
@@ -341,6 +353,12 @@ class MoreTweaksWindow(Adw.ApplicationWindow):
     def _on_filters_changed(self, _entry: Gtk.SearchEntry):
         self.refresh_rows()
 
+    def _should_hide(self, tweak) -> bool:
+        """Return True if this tweak should be skipped due to preferences."""
+        if get_preferences().hide_unavailable and not self.backend.is_available(tweak):
+            return True
+        return False
+
     def refresh_rows(self):
         query = self.search_entry.get_text().strip()
 
@@ -362,6 +380,8 @@ class MoreTweaksWindow(Adw.ApplicationWindow):
 
             self.results_stack.set_visible_child_name("results")
             for tweak in matches:
+                if self._should_hide(tweak):
+                    continue
                 if tweak.control == "text-list":
                     row = TextListRow(tweak, self.backend, highlight=query)
                 elif tweak.control == "extension-list":
@@ -407,6 +427,8 @@ class MoreTweaksWindow(Adw.ApplicationWindow):
 
         self.results_stack.set_visible_child_name("results")
         for tweak in matches:
+            if self._should_hide(tweak):
+                continue
             if tweak.control == "text-list":
                 row = TextListRow(tweak, self.backend)
             elif tweak.control == "extension-list":
@@ -526,6 +548,9 @@ class MoreTweaksWindow(Adw.ApplicationWindow):
         dialog = Gtk.FileDialog()
         dialog.set_title("Export settings")
         dialog.set_initial_name("more-tweaks-backup.json")
+        export_dir = get_preferences().default_export_dir
+        if export_dir and Path(export_dir).is_dir():
+            dialog.set_initial_folder(Gio.File.new_for_path(export_dir))
         json_filter = Gtk.FileFilter()
         json_filter.set_name("JSON files")
         json_filter.add_pattern("*.json")
