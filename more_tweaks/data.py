@@ -864,6 +864,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("lock-screen", "identity", "privacy", "name", "avatar", "security"),
         command_hint="gsettings set org.gnome.desktop.privacy hide-identity true",
+        min_gnome=46,
     ),
     Tweak(
         id="privacy-lock-delay",
@@ -943,6 +944,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("privacy", "camera", "security", "webcam", "video", "block"),
         command_hint="gsettings set org.gnome.desktop.privacy disable-camera true",
+        min_gnome=43,
     ),
     Tweak(
         id="privacy-disable-microphone",
@@ -956,6 +958,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("privacy", "microphone", "security", "audio", "recording", "block", "mic"),
         command_hint="gsettings set org.gnome.desktop.privacy disable-microphone true",
+        min_gnome=43,
     ),
     Tweak(
         id="lockdown-disable-lock-screen",
@@ -1104,6 +1107,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("appearance", "dark-mode", "theme", "light", "color-scheme", "style", "prefer-dark"),
         command_hint="gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'",
+        min_gnome=42,
     ),
     Tweak(
         id="themes-accent-color",
@@ -1128,6 +1132,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("appearance", "accent", "color", "tint", "highlight", "theme", "style"),
         command_hint="gsettings set org.gnome.desktop.interface accent-color 'blue'",
+        min_gnome=47,
     ),
     Tweak(
         id="themes-gtk-theme",
@@ -1317,6 +1322,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("fonts", "rendering", "text", "hinting", "antialiasing", "toolkit"),
         command_hint="gsettings set org.gnome.desktop.interface font-rendering 'manual'",
+        min_gnome=48,
     ),
     Tweak(
         id="themes-font-antialiasing",
@@ -1831,6 +1837,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("search", "files", "nautilus", "recursive", "subfolders", "deep"),
         command_hint="gsettings set org.gnome.nautilus.preferences recursive-search 'always'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="search-thumbnail-cache-age",
@@ -1894,6 +1901,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("files", "nautilus", "view", "grid", "list", "icon", "layout"),
         command_hint="gsettings set org.gnome.nautilus.preferences default-folder-viewer 'list-view'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-show-hidden-files",
@@ -1907,6 +1915,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("files", "nautilus", "hidden", "dotfiles", "invisible", "show"),
         command_hint="gsettings set org.gnome.nautilus.preferences show-hidden-files true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-click-policy",
@@ -1924,6 +1933,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("files", "nautilus", "click", "single", "double", "open"),
         command_hint="gsettings set org.gnome.nautilus.preferences click-policy 'double'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-show-delete-permanently",
@@ -1937,6 +1947,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("files", "nautilus", "delete", "permanent", "trash", "bypass", "remove"),
         command_hint="gsettings set org.gnome.nautilus.preferences show-delete-permanently true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-show-image-thumbnails",
@@ -1955,6 +1966,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("files", "nautilus", "thumbnails", "preview", "images", "photos"),
         command_hint="gsettings set org.gnome.nautilus.preferences show-image-thumbnails 'local-only'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-thumbnail-limit",
@@ -1971,6 +1983,7 @@ TWEAKS: tuple[Tweak, ...] = (
         step=64,
         tags=("files", "nautilus", "thumbnails", "size", "limit", "preview", "performance"),
         command_hint="gsettings set org.gnome.nautilus.preferences thumbnail-limit 1024",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-default-sort-order",
@@ -1993,6 +2006,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("files", "nautilus", "sorting", "order", "name", "date", "size", "type"),
         command_hint="gsettings set org.gnome.nautilus.preferences default-sort-order 'name'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-search-filter-time-type",
@@ -2011,6 +2025,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("files", "nautilus", "search", "filter", "time", "date", "modified"),
         command_hint="gsettings set org.gnome.nautilus.preferences search-filter-time-type 'last_modified'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-reverse-sort-order",
@@ -2024,6 +2039,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("files", "nautilus", "sorting", "reverse", "descending", "newest-first"),
         command_hint="gsettings set org.gnome.nautilus.preferences default-sort-in-reverse-order true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-icon-view-zoom",
@@ -2044,6 +2060,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("files", "nautilus", "zoom"),
         command_hint="gsettings set org.gnome.nautilus.icon-view default-zoom-level 'medium'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-list-view-zoom",
@@ -2062,6 +2079,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("files", "nautilus", "zoom"),
         command_hint="gsettings set org.gnome.nautilus.list-view default-zoom-level 'medium'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-default-compression-format",
@@ -2081,6 +2099,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("files", "nautilus", "archives", "compress", "zip", "tar", "7z"),
         command_hint="gsettings set org.gnome.nautilus.compression default-compression-format 'zip'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-open-folder-on-dnd-hover",
@@ -2094,6 +2113,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("files", "nautilus", "drag-and-drop", "hover", "dnd", "move"),
         command_hint="gsettings set org.gnome.nautilus.preferences open-folder-on-dnd-hover true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-full-text-search",
@@ -2107,6 +2127,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("files", "nautilus", "search", "full-text", "contents", "index"),
         command_hint="gsettings set org.gnome.nautilus.preferences fts-enabled true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-show-create-link",
@@ -2120,6 +2141,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("files", "nautilus", "links", "symlink", "symbolic", "shortcut"),
         command_hint="gsettings set org.gnome.nautilus.preferences show-create-link true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-location-entry",
@@ -2133,6 +2155,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("files", "nautilus", "paths", "breadcrumb", "address-bar", "location", "typing"),
         command_hint="gsettings set org.gnome.nautilus.preferences always-use-location-entry true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-date-time-format",
@@ -2150,6 +2173,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("files", "nautilus", "dates", "timestamp", "format", "simple", "detailed"),
         command_hint="gsettings set org.gnome.nautilus.preferences date-time-format 'detailed'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-use-tree-view",
@@ -2163,6 +2187,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("files", "nautilus", "tree-view"),
         command_hint="gsettings set org.gnome.nautilus.list-view use-tree-view true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-extra-mouse-buttons",
@@ -2176,6 +2201,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("files", "nautilus", "mouse"),
         command_hint="gsettings set org.gnome.nautilus.preferences mouse-use-extra-buttons true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-mouse-back-button",
@@ -2192,6 +2218,7 @@ TWEAKS: tuple[Tweak, ...] = (
         step=1,
         tags=("files", "nautilus", "mouse"),
         command_hint="gsettings set org.gnome.nautilus.preferences mouse-back-button 8",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-mouse-forward-button",
@@ -2208,6 +2235,7 @@ TWEAKS: tuple[Tweak, ...] = (
         step=1,
         tags=("files", "nautilus", "mouse"),
         command_hint="gsettings set org.gnome.nautilus.preferences mouse-forward-button 9",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-show-directory-item-counts",
@@ -2226,6 +2254,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("files", "nautilus", "metadata"),
         command_hint="gsettings set org.gnome.nautilus.preferences show-directory-item-counts 'local-only'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-open-maximized",
@@ -2239,6 +2268,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("files", "nautilus", "window", "maximized", "fullscreen"),
         command_hint="gsettings set org.gnome.nautilus.window-state maximized true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-install-mime-activation",
@@ -2252,6 +2282,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("files", "nautilus", "mime", "handler", "installer", "application"),
         command_hint="gsettings set org.gnome.nautilus.preferences install-mime-activation false",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-icon-captions",
@@ -2265,6 +2296,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="text-list",
         tags=("files", "nautilus", "icon", "captions", "metadata", "labels"),
         command_hint="gsettings set org.gnome.nautilus.icon-view captions \"['size', 'type', 'none']\"",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-initial-window-size",
@@ -2278,6 +2310,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="dimensions",
         tags=("files", "nautilus", "window", "size", "width", "height", "dimensions"),
         command_hint="gsettings set org.gnome.nautilus.window-state initial-size '(1104, 728)'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="files-initial-file-chooser-size",
@@ -2291,6 +2324,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="dimensions",
         tags=("files", "nautilus", "dialog", "file-chooser", "size", "width", "height"),
         command_hint="gsettings set org.gnome.nautilus.window-state initial-size-file-chooser '(890, 550)'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="accessibility-high-contrast",
@@ -2395,6 +2429,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("accessibility", "visibility", "ui", "shapes", "indicators", "color-blind", "status"),
         command_hint="gsettings set org.gnome.desktop.a11y.interface show-status-shapes true",
+        min_gnome=47,
     ),
     Tweak(
         id="accessibility-magnifier-zoom",
@@ -3297,6 +3332,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("files", "nautilus", "paths", "titlebar", "full-path", "directory"),
         command_hint="gsettings set org.gnome.nautilus.preferences show-full-path-titles true",
+        unavailable_hint="App Not Installed",
     ),
     # search
     Tweak(
@@ -3591,6 +3627,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="text",
         tags=("editor", "theme", "syntax"),
         command_hint="gsettings set org.gnome.TextEditor style-scheme 'Adwaita-dark'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="editor-line-numbers",
@@ -3604,6 +3641,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("editor", "lines", "gutter"),
         command_hint="gsettings set org.gnome.TextEditor show-line-numbers true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="editor-highlight-line",
@@ -3617,6 +3655,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("editor", "cursor", "visibility"),
         command_hint="gsettings set org.gnome.TextEditor highlight-current-line true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="editor-indent-style",
@@ -3634,6 +3673,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("editor", "indentation", "whitespace"),
         command_hint="gsettings set org.gnome.TextEditor indent-style 'space'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="editor-tab-width",
@@ -3650,6 +3690,7 @@ TWEAKS: tuple[Tweak, ...] = (
         step=1,
         tags=("editor", "indentation", "whitespace"),
         command_hint="gsettings set org.gnome.TextEditor tab-width 4",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="editor-auto-indent",
@@ -3663,6 +3704,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("editor", "indentation", "typing"),
         command_hint="gsettings set org.gnome.TextEditor auto-indent true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="editor-wrap-text",
@@ -3676,6 +3718,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("editor", "wrapping", "display"),
         command_hint="gsettings set org.gnome.TextEditor wrap-text true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="editor-right-margin",
@@ -3692,6 +3735,7 @@ TWEAKS: tuple[Tweak, ...] = (
         step=1,
         tags=("editor", "margin", "guide"),
         command_hint="gsettings set org.gnome.TextEditor right-margin-position 80",
+        unavailable_hint="App Not Installed",
     ),
     # apps (new category)
     Tweak(
@@ -3706,6 +3750,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("console", "terminal", "fonts"),
         command_hint="gsettings set org.gnome.Console use-system-font true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-console-custom-font",
@@ -3719,6 +3764,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="font",
         tags=("console", "terminal", "fonts"),
         command_hint="gsettings set org.gnome.Console custom-font 'JetBrains Mono 12'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-console-start-maximized",
@@ -3732,6 +3778,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("console", "terminal", "window"),
         command_hint="gsettings set org.gnome.Console last-window-maximized true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-console-theme",
@@ -3751,6 +3798,7 @@ TWEAKS: tuple[Tweak, ...] = (
         ),
         tags=("console", "terminal", "theme", "colors"),
         command_hint="gsettings set org.gnome.Console theme 'night'",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-console-scrollback-lines",
@@ -3767,6 +3815,7 @@ TWEAKS: tuple[Tweak, ...] = (
         step=1000,
         tags=("console", "terminal", "scrollback"),
         command_hint="gsettings set org.gnome.Console scrollback-lines 10000",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-console-ignore-scrollback-limit",
@@ -3780,6 +3829,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("console", "terminal", "scrollback"),
         command_hint="gsettings set org.gnome.Console ignore-scrollback-limit true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-console-font-scale",
@@ -3796,6 +3846,7 @@ TWEAKS: tuple[Tweak, ...] = (
         step=0.1,
         tags=("console", "terminal", "fonts", "zoom"),
         command_hint="gsettings set org.gnome.Console font-scale 1.2",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-console-transparency",
@@ -3809,6 +3860,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("console", "terminal", "transparency"),
         command_hint="gsettings set org.gnome.Console transparency true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-console-audible-bell",
@@ -3822,6 +3874,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("console", "terminal", "bell", "sound"),
         command_hint="gsettings set org.gnome.Console audible-bell false",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-console-visual-bell",
@@ -3835,6 +3888,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("console", "terminal", "bell", "accessibility"),
         command_hint="gsettings set org.gnome.Console visual-bell true",
+        unavailable_hint="App Not Installed",
     ),
     Tweak(
         id="apps-screenshot-include-pointer",
@@ -4072,6 +4126,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("clocks", "location", "weather"),
         command_hint="gsettings set org.gnome.clocks geolocation true",
+        unavailable_hint="App Not Installed",
     ),
     # apps: GNOME Terminal Legacy
     Tweak(
@@ -4174,6 +4229,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("lock-screen", "suspend", "security", "ubuntu", "sleep", "resume"),
         command_hint="gsettings set org.gnome.desktop.screensaver ubuntu-lock-on-suspend true",
+        unavailable_hint="Ubuntu Only",
     ),
     # windows: dash-to-dock extension
     Tweak(
@@ -4188,6 +4244,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="boolean",
         tags=("dock", "workspaces", "extensions", "dash-to-dock", "isolate", "taskbar"),
         command_hint="gsettings set org.gnome.shell.extensions.dash-to-dock isolate-workspaces true",
+        unavailable_hint="Extension Not Installed",
     ),
     # desktop: shell keybindings
     Tweak(
@@ -4591,6 +4648,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="text-list",
         tags=("files", "nautilus", "columns"),
         command_hint="gsettings set org.gnome.nautilus.list-view default-visible-columns \"['name', 'size', 'date_modified']\"",
+        unavailable_hint="App Not Installed",
     ),
     # files: list view column order
     Tweak(
@@ -4605,6 +4663,7 @@ TWEAKS: tuple[Tweak, ...] = (
         control="text-list",
         tags=("files", "nautilus", "columns"),
         command_hint="gsettings set org.gnome.nautilus.list-view default-column-order \"['name', 'size', 'type', 'date_modified']\"",
+        unavailable_hint="App Not Installed",
     ),
     # sound: media handling content types
     Tweak(

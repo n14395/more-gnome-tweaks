@@ -315,6 +315,14 @@ class SettingsBackend:
         self._schema_source = Gio.SettingsSchemaSource.get_default()
         self._change_callbacks: list[Callable[[str, str], None]] = []
         self._suppressed: set[tuple[str, str]] = set()
+        self._gnome_version: int | None = None
+
+    @property
+    def gnome_version(self) -> int:
+        if self._gnome_version is None:
+            from .animations import detect_gnome_shell_version
+            self._gnome_version = detect_gnome_shell_version()
+        return self._gnome_version
 
     def connect_change_callback(self, cb: Callable[[str, str], None]):
         self._change_callbacks.append(cb)
@@ -367,9 +375,18 @@ class SettingsBackend:
         """Return a short user-facing reason string, or *None* if available."""
         schema = self._get_schema(tweak.schema)
         if schema is None:
-            return tweak.unavailable_hint or "Not Installed"
+            if tweak.unavailable_hint:
+                return tweak.unavailable_hint
+            return "Not Installed"
         if not schema.has_key(tweak.key):
-            return tweak.unavailable_hint or "Requires GNOME Update"
+            if tweak.unavailable_hint:
+                return tweak.unavailable_hint
+            ver = self.gnome_version
+            if tweak.max_gnome is not None and ver > tweak.max_gnome:
+                return f"Removed in GNOME {tweak.max_gnome + 1}"
+            if tweak.min_gnome is not None and (ver == 0 or ver < tweak.min_gnome):
+                return f"Requires GNOME {tweak.min_gnome}+"
+            return "Not Available"
         return None
 
     def _get_settings(self, schema: str) -> Gio.Settings | None:

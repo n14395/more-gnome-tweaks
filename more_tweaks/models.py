@@ -27,6 +27,8 @@ class Tweak:
     step: float | None = None
     command_hint: str | None = None
     unavailable_hint: str | None = None
+    min_gnome: int | None = None
+    max_gnome: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

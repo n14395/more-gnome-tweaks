@@ -25,6 +25,21 @@ from .animation_catalog import (
 )
 
 
+def detect_gnome_shell_version() -> int:
+    """Parse GNOME Shell major version from CLI.  Returns major version or 0."""
+    try:
+        result = subprocess.run(
+            ["gnome-shell", "--version"],
+            capture_output=True, text=True, timeout=5,
+        )
+        for word in result.stdout.split():
+            if word and word[0].isdigit():
+                return int(word.split(".")[0])
+    except (OSError, subprocess.TimeoutExpired, ValueError, IndexError):
+        pass
+    return 0
+
+
 SCHEMA_ID = "com.n14395.more-tweaks.shell"
 EXTENSION_UUID = "more-tweaks-shell@n14395.github.com"
 EXTENSION_NAME = "More Tweaks Shell Runtime"
@@ -414,22 +429,12 @@ class AnimationBackend:
                 return int(ver_str)
             except ValueError:
                 pass
-        return self._detect_shell_version_from_cli()
+        return detect_gnome_shell_version()
 
     @staticmethod
     def _detect_shell_version_from_cli() -> int:
         """Parse GNOME Shell version from CLI.  Returns major version or 0."""
-        try:
-            result = subprocess.run(
-                ["gnome-shell", "--version"],
-                capture_output=True, text=True, timeout=5,
-            )
-            for word in result.stdout.split():
-                if word and word[0].isdigit():
-                    return int(word.split(".")[0])
-        except (OSError, subprocess.TimeoutExpired, ValueError, IndexError):
-            pass
-        return 0
+        return detect_gnome_shell_version()
 
     def get_active_capabilities(self) -> dict[str, bool]:
         """Return the capabilities reported by the running extension."""
