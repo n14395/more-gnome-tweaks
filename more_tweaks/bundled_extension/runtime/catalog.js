@@ -54,12 +54,12 @@ const MINIMIZE_PRESETS = ['Dock Funnel', 'Magic Lamp', 'Drift Down', 'Fade Out',
 const RESTORE_PRESETS = ['Dock Return', 'Magic Lamp Return', 'Bloom In', 'Glide In', 'Soft Pop', 'Lantern Rise'];
 const FOCUS_PRESETS = ['Pulse Focus', 'Halo Focus', 'Settle Focus', 'Wiggle Focus', 'Soft Focus Flash'];
 const DEFOCUS_PRESETS = ['Fade Dim', 'Slip Back', 'Shrink Fade', 'Quiet Defocus'];
-const MAXIMIZE_PRESETS = ['Expand Settle', 'Bloom In', 'Pulse Focus', 'Zoom In'];
-const UNMAXIMIZE_PRESETS = ['Contract Settle', 'Glide In', 'Settle Focus', 'Soft Pop'];
-const MOVE_START_PRESETS = ['Grip Pulse', 'Lift Away', 'Halo Focus'];
-const MOVE_STOP_PRESETS = ['Wobble Settle', 'Settle Focus', 'Soft Pop'];
-const RESIZE_START_PRESETS = ['Edge Tension', 'Grip Pulse', 'Halo Focus'];
-const RESIZE_STOP_PRESETS = ['Elastic Settle', 'Wobble Settle', 'Soft Pop'];
+const MAXIMIZE_PRESETS = ['Expand Settle', 'Bloom In', 'Pulse Focus', 'Zoom In', 'Snap Wobble'];
+const UNMAXIMIZE_PRESETS = ['Contract Settle', 'Glide In', 'Settle Focus', 'Soft Pop', 'Release Wobble'];
+const MOVE_START_PRESETS = ['Grip Pulse', 'Lift Away', 'Halo Focus', 'Jelly Grab'];
+const MOVE_STOP_PRESETS = ['Wobble Settle', 'Settle Focus', 'Soft Pop', 'Wobbly Drop'];
+const RESIZE_START_PRESETS = ['Edge Tension', 'Grip Pulse', 'Halo Focus', 'Rubber Stretch'];
+const RESIZE_STOP_PRESETS = ['Elastic Settle', 'Wobble Settle', 'Soft Pop', 'Spring Snap'];
 const NOTIFICATION_OPEN_PRESETS = ['Drift Up', 'Pulse Focus', 'Fade In', 'Banner Sweep', 'Fold In Vertical'];
 const NOTIFICATION_CLOSE_PRESETS = ['Fade Out', 'Drift Down', 'Shutter Out', 'Banner Fold', 'Soft Collapse'];
 
@@ -147,6 +147,12 @@ export const PRESETS = {
     'Wobble Settle': {family: 'Interactive', effect: transformEffect, setup: {rotationZ: -3.2}, phases: [{rotationZ: 2.4, mode: 'EASE_OUT_CUBIC', durationScale: 0.25}, {rotationZ: -1.8, mode: 'EASE_IN_CUBIC', durationScale: 0.25}, {rotationZ: 1.0, mode: 'EASE_IN_CUBIC', durationScale: 0.2}, {rotationZ: 0, mode: 'EASE_OUT_QUAD', durationScale: 0.3}]},
     'Edge Tension': {family: 'Interactive', effect: transformEffect, setup: {scaleX: 1.01, scaleY: 0.99}, phases: [{scaleX: 0.995, scaleY: 1.005, mode: 'EASE_OUT_CUBIC', durationScale: 0.5}, {scaleX: 1.0, scaleY: 1.0, mode: 'EASE_OUT_QUAD', durationScale: 0.5}]},
     'Elastic Settle': {family: 'Interactive', effect: transformEffect, setup: {scaleX: 1.03, scaleY: 0.97}, phases: [{scaleX: 0.985, scaleY: 1.015, mode: 'EASE_OUT_CUBIC', durationScale: 0.34}, {scaleX: 1.01, scaleY: 0.99, mode: 'EASE_IN_CUBIC', durationScale: 0.26}, {scaleX: 1.0, scaleY: 1.0, mode: 'EASE_OUT_QUAD', durationScale: 0.4}]},
+    'Jelly Grab': {family: 'Interactive', effect: transformEffect, setup: {scaleX: 0.96, scaleY: 1.04, rotationZ: -1.5}, phases: [{scaleX: 1.03, scaleY: 0.97, rotationZ: 1.0, mode: 'EASE_OUT_CUBIC', durationScale: 0.4}, {scaleX: 0.99, scaleY: 1.01, rotationZ: -0.4, mode: 'EASE_IN_CUBIC', durationScale: 0.3}, {scaleX: 1.0, scaleY: 1.0, rotationZ: 0, mode: 'EASE_OUT_QUAD', durationScale: 0.3}]},
+    'Wobbly Drop': {family: 'Interactive', effect: transformEffect, setup: {rotationZ: -4.5, scaleX: 1.02, scaleY: 0.98}, phases: [{rotationZ: 3.5, scaleX: 0.98, scaleY: 1.02, mode: 'EASE_OUT_CUBIC', durationScale: 0.2}, {rotationZ: -2.5, scaleX: 1.01, scaleY: 0.99, mode: 'EASE_IN_CUBIC', durationScale: 0.18}, {rotationZ: 1.8, scaleX: 0.995, scaleY: 1.005, mode: 'EASE_IN_CUBIC', durationScale: 0.16}, {rotationZ: -0.8, mode: 'EASE_IN_CUBIC', durationScale: 0.14}, {rotationZ: 0, scaleX: 1.0, scaleY: 1.0, mode: 'EASE_OUT_QUAD', durationScale: 0.32}]},
+    'Rubber Stretch': {family: 'Interactive', effect: transformEffect, setup: {scaleX: 1.04, scaleY: 0.96}, phases: [{scaleX: 0.97, scaleY: 1.03, mode: 'EASE_OUT_CUBIC', durationScale: 0.35}, {scaleX: 1.015, scaleY: 0.985, mode: 'EASE_IN_CUBIC', durationScale: 0.3}, {scaleX: 1.0, scaleY: 1.0, mode: 'EASE_OUT_QUAD', durationScale: 0.35}]},
+    'Spring Snap': {family: 'Interactive', effect: transformEffect, setup: {scaleX: 1.05, scaleY: 0.95, rotationZ: 1.2}, phases: [{scaleX: 0.97, scaleY: 1.03, rotationZ: -0.8, mode: 'EASE_OUT_CUBIC', durationScale: 0.25}, {scaleX: 1.02, scaleY: 0.98, rotationZ: 0.5, mode: 'EASE_IN_CUBIC', durationScale: 0.2}, {scaleX: 0.99, scaleY: 1.01, rotationZ: -0.2, mode: 'EASE_IN_CUBIC', durationScale: 0.2}, {scaleX: 1.0, scaleY: 1.0, rotationZ: 0, mode: 'EASE_OUT_QUAD', durationScale: 0.35}]},
+    'Snap Wobble': {family: 'State', effect: transformEffect, setup: {scaleX: 0.95, scaleY: 0.95}, phases: [{scaleX: 1.04, scaleY: 1.04, mode: 'EASE_OUT_CUBIC', durationScale: 0.3}, {scaleX: 0.98, scaleY: 0.98, mode: 'EASE_IN_CUBIC', durationScale: 0.2}, {scaleX: 1.015, scaleY: 1.015, mode: 'EASE_IN_CUBIC', durationScale: 0.2}, {scaleX: 1.0, scaleY: 1.0, mode: 'EASE_OUT_QUAD', durationScale: 0.3}]},
+    'Release Wobble': {family: 'State', effect: transformEffect, setup: {scaleX: 1.04, scaleY: 1.04}, phases: [{scaleX: 0.97, scaleY: 0.97, mode: 'EASE_OUT_CUBIC', durationScale: 0.3}, {scaleX: 1.02, scaleY: 1.02, mode: 'EASE_IN_CUBIC', durationScale: 0.2}, {scaleX: 0.99, scaleY: 0.99, mode: 'EASE_IN_CUBIC', durationScale: 0.2}, {scaleX: 1.0, scaleY: 1.0, mode: 'EASE_OUT_QUAD', durationScale: 0.3}]},
     'Banner Sweep': {family: 'Banner', effect: transformEffect, setup: {opacity: 0, translationX: 26, scaleX: 0.96}, phases: [{opacity: 255, translationX: 0, scaleX: 1.0, mode: 'EASE_OUT_CUBIC'}]},
     'Banner Fold': {family: 'Banner', effect: transformEffect, setup: {pivotY: 0.0}, phases: [{opacity: 0, scaleY: 0.16, mode: 'EASE_IN_CUBIC'}]},
     'Wiggle Out': {family: 'Playful', effect: transformEffect, setup: {}, phases: [{rotationZ: 4, mode: 'EASE_OUT_CUBIC', durationScale: 0.25}, {rotationZ: -5, mode: 'EASE_IN_CUBIC', durationScale: 0.25}, {rotationZ: 2, opacity: 180, mode: 'EASE_IN_CUBIC', durationScale: 0.2}, {rotationZ: 0, opacity: 0, scaleX: 0.92, scaleY: 0.92, mode: 'EASE_IN_CUBIC', durationScale: 0.3}]},

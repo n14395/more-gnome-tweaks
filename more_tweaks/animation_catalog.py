@@ -126,6 +126,7 @@ MAXIMIZE_PRESETS = (
     "Bloom In",
     "Pulse Focus",
     "Zoom In",
+    "Snap Wobble",
 )
 
 UNMAXIMIZE_PRESETS = (
@@ -133,30 +134,35 @@ UNMAXIMIZE_PRESETS = (
     "Glide In",
     "Settle Focus",
     "Soft Pop",
+    "Release Wobble",
 )
 
 MOVE_START_PRESETS = (
     "Grip Pulse",
     "Lift Away",
     "Halo Focus",
+    "Jelly Grab",
 )
 
 MOVE_STOP_PRESETS = (
     "Wobble Settle",
     "Settle Focus",
     "Soft Pop",
+    "Wobbly Drop",
 )
 
 RESIZE_START_PRESETS = (
     "Edge Tension",
     "Grip Pulse",
     "Halo Focus",
+    "Rubber Stretch",
 )
 
 RESIZE_STOP_PRESETS = (
     "Elastic Settle",
     "Wobble Settle",
     "Soft Pop",
+    "Spring Snap",
 )
 
 NOTIFICATION_OPEN_PRESETS = (
