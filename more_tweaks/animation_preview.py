@@ -65,11 +65,11 @@ class AnimationPreviewWidget(Gtk.Box):
         self._area.set_draw_func(self._draw)
         self.append(self._area)
 
-        replay_btn = Gtk.Button(label="Replay")
-        replay_btn.add_css_class("pill")
-        replay_btn.set_halign(Gtk.Align.CENTER)
-        replay_btn.connect("clicked", self._on_replay)
-        self.append(replay_btn)
+        self._toggle_btn = Gtk.Button(label="Stop")
+        self._toggle_btn.add_css_class("flat")
+        self._toggle_btn.set_halign(Gtk.Align.CENTER)
+        self._toggle_btn.connect("clicked", self._on_toggle)
+        self.append(self._toggle_btn)
 
         # Animation state
         self._opacity = 1.0
@@ -85,6 +85,8 @@ class AnimationPreviewWidget(Gtk.Box):
         self._duration_ms = 0
         self._delay_ms = 0
         self._intensity = 1.0
+        self._looping = True
+        self._loop_timeout_id = 0
 
     def set_visible_during_wait(self, visible: bool):
         """Set whether the mock window is shown before play() is called."""
@@ -93,6 +95,8 @@ class AnimationPreviewWidget(Gtk.Box):
             self._area.queue_draw()
 
     def play(self, preset: TransformPreset, duration_ms: int, delay_ms: int, intensity: float):
+        self._looping = True
+        self._update_toggle_btn()
         self._preset = preset
         self._duration_ms = duration_ms
         self._delay_ms = delay_ms
@@ -104,11 +108,31 @@ class AnimationPreviewWidget(Gtk.Box):
         if preset.phases:
             GLib.timeout_add(max(delay_ms, 1), self._start_phases)
 
-    def _on_replay(self, _btn):
-        if self._preset is not None:
-            self.play(self._preset, self._duration_ms, self._delay_ms, self._intensity)
+    def _on_toggle(self, _btn):
+        if self._looping:
+            self._looping = False
+            self._stop_all()
+            self._update_toggle_btn()
+        else:
+            self._looping = True
+            self._update_toggle_btn()
+            if self._preset is not None:
+                self.play(self._preset, self._duration_ms, self._delay_ms, self._intensity)
+
+    def _update_toggle_btn(self):
+        if self._looping:
+            self._toggle_btn.set_label("Stop")
+            self._toggle_btn.remove_css_class("pill")
+            self._toggle_btn.add_css_class("flat")
+        else:
+            self._toggle_btn.set_label("Replay")
+            self._toggle_btn.remove_css_class("flat")
+            self._toggle_btn.add_css_class("pill")
 
     def _stop_all(self):
+        if self._loop_timeout_id:
+            GLib.source_remove(self._loop_timeout_id)
+            self._loop_timeout_id = 0
         for anim in self._animations:
             anim.skip()
         self._animations.clear()
@@ -128,8 +152,16 @@ class AnimationPreviewWidget(Gtk.Box):
         self._run_phase_chain(list(self._preset.phases), 0)
         return False  # one-shot timeout
 
+    def _loop_restart(self):
+        self._loop_timeout_id = 0
+        if self._looping and self._preset is not None:
+            self.play(self._preset, self._duration_ms, self._delay_ms, self._intensity)
+        return False
+
     def _run_phase_chain(self, phases: list[PresetPhase], index: int):
         if index >= len(phases):
+            if self._looping:
+                self._loop_timeout_id = GLib.timeout_add(1000, self._loop_restart)
             return
 
         phase = phases[index]
