@@ -1226,6 +1226,7 @@ class ExtensionListRow(Adw.ExpanderRow):
         self.tweak = tweak
         self.backend = backend
         self._sub_rows: list[Gtk.Widget] = []
+        self._toggling = False
 
         self.set_title(tweak.name)
         self.set_subtitle(tweak.summary)
@@ -1335,11 +1336,40 @@ class ExtensionListRow(Adw.ExpanderRow):
         return row
 
     def _on_toggle(self, switch: Gtk.Switch, _pspec, uuid: str):
-        if switch.get_active():
-            self._enabled.add(uuid)
+        if self._toggling:
+            return
+        enable = switch.get_active()
+        method = "EnableExtension" if enable else "DisableExtension"
+        try:
+            proxy = Gio.DBusProxy.new_for_bus_sync(
+                Gio.BusType.SESSION,
+                Gio.DBusProxyFlags.NONE,
+                None,
+                "org.gnome.Shell.Extensions",
+                "/org/gnome/Shell/Extensions",
+                "org.gnome.Shell.Extensions",
+                None,
+            )
+            self.backend.suppress(self.tweak.schema, self.tweak.key)
+            result = proxy.call_sync(
+                method,
+                GLib.Variant("(s)", (uuid,)),
+                Gio.DBusCallFlags.NONE,
+                -1,
+                None,
+            )
+            success = result is not None and bool(result.unpack()[0])
+        except Exception:
+            success = False
+        if success:
+            if enable:
+                self._enabled.add(uuid)
+            else:
+                self._enabled.discard(uuid)
         else:
-            self._enabled.discard(uuid)
-        self._set_enabled(self._enabled)
+            self._toggling = True
+            switch.set_active(not enable)
+            self._toggling = False
 
     def _on_uninstall_clicked(self, _button: Gtk.Button, uuid: str, name: str):
         dialog = Adw.AlertDialog(
