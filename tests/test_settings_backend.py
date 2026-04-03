@@ -41,10 +41,10 @@ def mock_gi():
     mock_settings.connect.return_value = 1
 
     with (
-        patch("more_tweaks.window.Gio.SettingsSchemaSource.get_default", return_value=mock_source),
-        patch("more_tweaks.window.Gio.Settings.new_full", return_value=mock_settings),
+        patch("more_tweaks.settings_backend.Gio.SettingsSchemaSource.get_default", return_value=mock_source),
+        patch("more_tweaks.settings_backend.Gio.Settings.new_full", return_value=mock_settings),
     ):
-        from more_tweaks.window import SettingsBackend
+        from more_tweaks.settings_backend import SettingsBackend
         backend = SettingsBackend()
         yield backend, mock_settings, mock_schema, mock_source
 
