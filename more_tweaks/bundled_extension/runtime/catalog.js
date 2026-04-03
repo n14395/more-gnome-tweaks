@@ -1,11 +1,11 @@
-import {DockFunnelEffect, MagicLampEffect} from './deform-effect.js';
+import {DeformEffect, DOCK_FUNNEL_CONFIG, MAGIC_LAMP_CONFIG} from './deform-effect.js';
 import {ShaderPulseEffect} from './shader-effect.js';
 import {TransformEffect} from './transform-effect.js';
 
 
 export const transformEffect = new TransformEffect('transform');
-const dockFunnelEffect = new DockFunnelEffect();
-const magicLampEffect = new MagicLampEffect();
+const dockFunnelEffect = new DeformEffect('dock-funnel', DOCK_FUNNEL_CONFIG);
+const magicLampEffect = new DeformEffect('magic-lamp', MAGIC_LAMP_CONFIG);
 const shaderPulseEffect = new ShaderPulseEffect();
 
 export const PROFILE_NAMES = ['Default', 'Muted', 'Balanced', 'Expressive', 'Signature'];
