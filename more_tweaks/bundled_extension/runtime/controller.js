@@ -871,7 +871,9 @@ class TileGridManager {
         this._previewLoc = null;   // { col, row, w, h } in grid units
         this._dragWindow = null;
         this._mutterSettings = null;
-        this._savedEdgeTiling = null;
+        this._mutterChangedId = null;
+        this._nativeSuppressed = false;   // true while edge-tiling is temporarily false during a drag
+        this._suppressingNative = false;  // re-entrancy guard for our own writes
         this._tiledWindows = new WeakMap();  // window -> original frame rect
     }
 
@@ -884,6 +886,17 @@ class TileGridManager {
             const id = this._settings.connect(`changed::${key}`, () => this._reconfigure());
             this._signalIds.push(id);
         }
+        // Monitor native edge-tiling so we activate/deactivate in sync
+        try {
+            this._mutterSettings = new Gio.Settings({ schema_id: 'org.gnome.mutter' });
+            this._mutterChangedId = this._mutterSettings.connect(
+                'changed::edge-tiling', () => {
+                    if (!this._suppressingNative)
+                        this._reconfigure();
+                });
+        } catch (_e) {
+            this._mutterSettings = null;
+        }
         this._reconfigure();
     }
 
@@ -891,6 +904,11 @@ class TileGridManager {
         this._disconnectGrab();
         this._cancelDrag();
         this._destroyPreview();
+        if (this._mutterChangedId && this._mutterSettings) {
+            this._mutterSettings.disconnect(this._mutterChangedId);
+            this._mutterChangedId = null;
+        }
+        this._mutterSettings = null;
         for (const id of this._signalIds)
             this._settings.disconnect(id);
         this._signalIds = [];
@@ -902,7 +920,13 @@ class TileGridManager {
     // ── Grab lifecycle ───────────────────────────────────────────
 
     _reconfigure() {
-        if (this._bool('tile-preview-enabled'))
+        const previewEnabled = this._bool('tile-preview-enabled');
+        // During a drag we've temporarily suppressed edge-tiling; treat it as ON
+        let edgeTilingOn = this._nativeSuppressed;
+        if (!edgeTilingOn) {
+            try { edgeTilingOn = this._mutterSettings?.get_boolean('edge-tiling') ?? false; } catch (_e) {}
+        }
+        if (previewEnabled && edgeTilingOn)
             this._connectGrab();
         else {
             this._disconnectGrab();
@@ -913,16 +937,6 @@ class TileGridManager {
 
     _connectGrab() {
         if (this._grabBeginId) return;
-        // Disable GNOME's built-in edge-tiling so it doesn't compete
-        try {
-            this._mutterSettings = new Gio.Settings({ schema_id: 'org.gnome.mutter' });
-            this._savedEdgeTiling = this._mutterSettings.get_boolean('edge-tiling');
-            if (this._savedEdgeTiling)
-                this._mutterSettings.set_boolean('edge-tiling', false);
-        } catch (_e) {
-            this._mutterSettings = null;
-            this._savedEdgeTiling = null;
-        }
         this._grabBeginId = global.display.connect('grab-op-begin',
             (_d, win, op) => this._onGrabBegin(win, op));
         this._grabEndId = global.display.connect('grab-op-end',
@@ -938,18 +952,25 @@ class TileGridManager {
             global.display.disconnect(this._grabEndId);
             this._grabEndId = null;
         }
-        // Restore GNOME's built-in edge-tiling
-        if (this._mutterSettings && this._savedEdgeTiling !== null) {
-            try { this._mutterSettings.set_boolean('edge-tiling', this._savedEdgeTiling); } catch (_e) {}
-            this._mutterSettings = null;
-            this._savedEdgeTiling = null;
-        }
+        // Restore native edge-tiling if we're mid-drag when disconnecting
+        this._restoreNativeEdgeTiling();
     }
 
     _onGrabBegin(win, op) {
         // Only handle window-move grabs (op 1), ignoring resize ops.
         // Bit 1024 is set for keyboard-initiated moves.
         if ((op & ~1024) !== 1 || !win) return;
+
+        // Temporarily suppress native edge-tiling for the duration of this
+        // drag so Mutter doesn't show its own preview or tile the window.
+        try {
+            this._suppressingNative = true;
+            this._mutterSettings?.set_boolean('edge-tiling', false);
+            this._nativeSuppressed = true;
+        } catch (_e) {} finally {
+            this._suppressingNative = false;
+        }
+
         this._dragWindow = win;
 
         // Restore original window size when dragging a previously-tiled window
@@ -981,7 +1002,16 @@ class TileGridManager {
         const win = this._dragWindow;
         this._cancelDrag();
         this._hidePreview();
-        if (!loc || !win) return;
+
+        if (!loc || !win) {
+            // No tile snap — restore native edge-tiling in an idle callback
+            // so Mutter's grab-end processing sees edge-tiling=false throughout.
+            GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                this._restoreNativeEdgeTiling();
+                return GLib.SOURCE_REMOVE;
+            });
+            return;
+        }
 
         // Save the current frame rect so we can restore it on un-tile
         try {
@@ -993,13 +1023,15 @@ class TileGridManager {
 
         const workArea = win.get_work_area_current_monitor();
         const rect = this._calcTileRect(loc, workArea);
-        // Defer so GNOME Shell finishes its own grab processing first
+        // Defer so GNOME Shell finishes its own grab processing first,
+        // then position the window and restore native edge-tiling.
         GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
             try {
                 const m = win.get_maximized?.() ?? 0;
                 if (m) win.unmaximize(m);
                 win.move_resize_frame(false, rect.x, rect.y, rect.width, rect.height);
             } catch (_e) { /* window may have been destroyed */ }
+            this._restoreNativeEdgeTiling();
             return GLib.SOURCE_REMOVE;
         });
     }
@@ -1015,6 +1047,17 @@ class TileGridManager {
         }
         this._dragWindow = null;
         this._previewLoc = null;
+    }
+
+    _restoreNativeEdgeTiling() {
+        if (!this._nativeSuppressed) return;
+        try {
+            this._suppressingNative = true;
+            this._mutterSettings?.set_boolean('edge-tiling', true);
+        } catch (_e) {} finally {
+            this._suppressingNative = false;
+        }
+        this._nativeSuppressed = false;
     }
 
     // ── Mouse polling ────────────────────────────────────────────

@@ -604,12 +604,18 @@ class AnimationBackend:
         import json
         return self._set_string("panel-layout", json.dumps(layout) if layout else "")
 
+    _NON_ANIMATION_PREFIXES = (
+        "gesture-", "tile-", "topbar-", "activities-", "clock-",
+        "panel-", "detected-", "active-",
+    )
+
     def restore_defaults(self) -> bool:
         if self._settings is None or self._schema is None:
             return False
         try:
             for key in self._schema.list_keys():
-                self._settings.reset(key)
+                if not key.startswith(self._NON_ANIMATION_PREFIXES):
+                    self._settings.reset(key)
         except Exception:
             _log.warning("Failed to restore extension defaults", exc_info=True)
             return False
