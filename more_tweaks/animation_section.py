@@ -429,9 +429,9 @@ class AnimationSection(_ScrollPreservingSection):
         group.add(enable_row)
 
         # Restore defaults button
-        defaults_row = Adw.ActionRow(title="Restore bundled defaults")
+        defaults_row = Adw.ActionRow(title="Restore system defaults")
         defaults_row.set_subtitle(
-            "Reset timings and hidden advanced controls back to their shipped values."
+            "Reset animation overrides back to GNOME's stock behavior."
         )
         defaults_button = Gtk.Button(label="Restore")
         defaults_button.add_css_class("pill")
@@ -1212,9 +1212,9 @@ class AnimationSection(_ScrollPreservingSection):
             self.refresh()
             return
         if not self.backend.restore_defaults():
-            self._toast("Could not restore bundled animation defaults")
+            self._toast("Could not restore system animation defaults")
         else:
-            self._toast("Bundled animation defaults restored")
+            self._toast("System animation defaults restored")
         self.refresh()
 
     def _prepare_runtime(self, action: str) -> bool:
